@@ -16,6 +16,7 @@
  ***************************************************************************/
 #include "qgshanaproviderconnection.h"
 #include "qgshanaconnectionpool.h"
+#include "qgsdbquerylog.h"
 #include "qgshanaexception.h"
 #include "qgshanaprimarykeys.h"
 #include "qgshanaprovider.h"
@@ -136,7 +137,7 @@ void QgsHanaProviderConnection::setCapabilities()
                                         "WHERE USER_NAME = CURRENT_USER AND IS_VALID = 'TRUE'" );
     try
     {
-      QgsHanaResultSetRef rsPrivileges = conn->executeQuery( sql );
+      QgsHanaResultSetRef rsPrivileges = conn->executeQuery( sql, QStringLiteral( "QgsHanaProviderConnection" ), QGS_QUERY_LOG_ORIGIN );
       while ( rsPrivileges->next() )
       {
         QString objType = rsPrivileges->getString( 1 );
@@ -286,11 +287,11 @@ QgsAbstractDatabaseProviderConnection::QueryResult QgsHanaProviderConnection::ex
 
   try
   {
-    PreparedStatementRef stmt = conn->prepareStatement( sql );
+    PreparedStatementRef stmt = conn->prepareStatement( sql, QStringLiteral( "QgsHanaProviderConnection" ), QGS_QUERY_LOG_ORIGIN );
     bool isQuery = stmt->getMetaDataUnicode()->getColumnCount() > 0;
     if ( isQuery )
     {
-      QgsHanaResultSetRef rs = conn->executeQuery( sql );
+      QgsHanaResultSetRef rs = conn->executeQuery( sql, QStringLiteral( "QgsHanaProviderConnection" ), QGS_QUERY_LOG_ORIGIN );
       ResultSetMetaDataUnicode &md = rs->getMetadata();
       unsigned short numColumns = md.getColumnCount();
       QStringList columns;
@@ -305,7 +306,7 @@ QgsAbstractDatabaseProviderConnection::QueryResult QgsHanaProviderConnection::ex
     else
     {
       std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-      conn->execute( sql );
+      conn->execute( sql, QStringLiteral( "QgsHanaProviderConnection" ), QGS_QUERY_LOG_ORIGIN );
       conn->commit();
       std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
       QueryResult results( std::make_shared<QgsHanaEmptyProviderResultIterator>() );
@@ -334,7 +335,7 @@ void QgsHanaProviderConnection::executeSqlStatement( const QString &sql ) const
 
   try
   {
-    conn->execute( sql );
+    conn->execute( sql, QStringLiteral( "QgsHanaProviderConnection" ), QGS_QUERY_LOG_ORIGIN );
     conn->commit();
   }
   catch ( const QgsHanaException &ex )

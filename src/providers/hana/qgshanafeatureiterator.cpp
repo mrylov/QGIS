@@ -14,6 +14,7 @@
  * (at your option) any later version.
  *
  ***************************************************************************/
+#include "qgsdbquerylog.h"
 #include "qgsexception.h"
 #include "qgsgeometry.h"
 #include "qgsgeometryfactory.h"
@@ -139,7 +140,7 @@ bool QgsHanaFeatureIterator::rewind()
     return false;
 
   mResultSet.reset();
-  mResultSet = mConnection->executeQuery( mSqlQuery, mSqlQueryParams );
+  mResultSet = mConnection->executeQuery( mSqlQuery, mSqlQueryParams, QStringLiteral( "QgsHanaFeatureIterator" ), QGS_QUERY_LOG_ORIGIN );
 
   return true;
 }

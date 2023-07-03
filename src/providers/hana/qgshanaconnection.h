@@ -19,6 +19,7 @@
 
 #include "qgscoordinatereferencesystem.h"
 #include "qgsdatasourceuri.h"
+#include "qgsdbquerylog.h"
 #include "qgshanatablemodel.h"
 #include "qgshanaresultset.h"
 #include "qgsvectordataprovider.h"
@@ -56,16 +57,16 @@ class QgsHanaConnection : public QObject
 
     QString connInfo() const;
 
-    void execute( const QString &sql );
-    bool execute( const QString &sql, QString *errorMessage );
-    QgsHanaResultSetRef executeQuery( const QString &sql );
-    QgsHanaResultSetRef executeQuery( const QString &sql, const QVariantList &args );
-    size_t executeCountQuery( const QString &sql );
-    size_t executeCountQuery( const QString &sql, const QVariantList &args );
-    QVariant executeScalar( const QString &sql );
-    QVariant executeScalar( const QString &sql, const QVariantList &args );
+    void execute( const QString &sql, const QString &originatorClass = QString(), const QString &queryOrigin = QString() );
+    bool execute( const QString &sql, QString *errorMessage, const QString &originatorClass = QString(), const QString &queryOrigin = QString() );
+    QgsHanaResultSetRef executeQuery( const QString &sql, const QString &originatorClass = QString(), const QString &queryOrigin = QString() );
+    QgsHanaResultSetRef executeQuery( const QString &sql, const QVariantList &args, const QString &originatorClass = QString(), const QString &queryOrigin = QString() );
+    size_t executeCountQuery( const QString &sql, const QString &originatorClass = QString(), const QString &queryOrigin = QString() );
+    size_t executeCountQuery( const QString &sql, const QVariantList &args, const QString &originatorClass = QString(), const QString &queryOrigin = QString() );
+    QVariant executeScalar( const QString &sql, const QString &originatorClass = QString(), const QString &queryOrigin = QString() );
+    QVariant executeScalar( const QString &sql, const QVariantList &args, const QString &originatorClass = QString(), const QString &queryOrigin = QString() );
 
-    NS_ODBC::PreparedStatementRef prepareStatement( const QString &sql );
+    NS_ODBC::PreparedStatementRef prepareStatement( const QString &sql, const QString &originatorClass = QString(), const QString &queryOrigin = QString() );
 
     void commit();
     void rollback();
@@ -109,6 +110,8 @@ class QgsHanaConnection : public QObject
     QStringList getPrimaryKeyCandidates( const QgsHanaLayerProperty &layerProperty );
 
     NS_ODBC::PreparedStatementRef createPreparedStatement( const QString &sql, const QVariantList &args );
+
+    std::unique_ptr<QgsDatabaseQueryLogWrapper> createQueryLogWrapper( const QString &sql, const QString &originatorClass, const QString &queryOrigin );
 
   private:
     NS_ODBC::ConnectionRef mConnection;

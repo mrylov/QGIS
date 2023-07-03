@@ -18,6 +18,7 @@
 #include "qgsapplication.h"
 #include "qgscoordinatereferencesystem.h"
 #include "qgsdataprovider.h"
+#include "qgsdbquerylog.h"
 #include "qgserror.h"
 #include "qgsfeature.h"
 #include "qgsfields.h"
@@ -71,19 +72,19 @@ namespace
   void checkAndCreateUnitOfMeasure( QgsHanaConnection &conn, const QString &name, const QString &type, double conversionFactor )
   {
     QString sql = QStringLiteral( "SELECT COUNT(*) FROM SYS.ST_UNITS_OF_MEASURE WHERE UNIT_NAME = ? AND UNIT_TYPE = ?" );
-    size_t numUnits = conn.executeCountQuery( sql, { name, type } );
+    size_t numUnits = conn.executeCountQuery( sql, { name, type }, QStringLiteral( "QgsHanaProvider" ), QGS_QUERY_LOG_ORIGIN );
     if ( numUnits > 0 )
       return;
 
     sql = QStringLiteral( "SELECT COUNT(*) FROM SYS.ST_UNITS_OF_MEASURE WHERE UNIT_NAME = ?" );
-    numUnits = conn.executeCountQuery( sql, { name} );
+    numUnits = conn.executeCountQuery( sql, { name}, QStringLiteral( "QgsHanaProvider" ), QGS_QUERY_LOG_ORIGIN );
     if ( numUnits > 0 )
       throw QgsHanaException( QObject::tr( "Unable to create a new unit of measure. "
                                            "Unit of measure with name '%1' and different type already exist." ).arg( name ) );
 
     sql = QStringLiteral( "CREATE SPATIAL UNIT OF MEASURE %1 TYPE %2 CONVERT USING %3" ).arg(
             QgsHanaUtils::quotedIdentifier( name ), type, QString::number( conversionFactor ) );
-    conn.execute( sql );
+    conn.execute( sql, QStringLiteral( "QgsHanaProvider" ), QGS_QUERY_LOG_ORIGIN );
   }
 
   void createCoordinateSystem( QgsHanaConnection &conn, const QgsCoordinateReferenceSystem &srs )
@@ -137,7 +138,7 @@ namespace
                         QgsHanaUtils::quotedString( srs.toProj() ) );
 
     QString errorMessage;
-    conn.execute( sql, &errorMessage );
+    conn.execute( sql, &errorMessage, QStringLiteral( "QgsHanaProvider" ), QGS_QUERY_LOG_ORIGIN );
 
     if ( !errorMessage.isEmpty() )
       throw QgsHanaException( errorMessage.toStdString().c_str() );
@@ -171,7 +172,7 @@ namespace
   bool isSrsRoundEarth( QgsHanaConnection &conn, int srsId )
   {
     QString sql = QStringLiteral( "SELECT ROUND_EARTH FROM SYS.ST_SPATIAL_REFERENCE_SYSTEMS WHERE SRS_ID = ?" );
-    QVariant roundEarth = conn.executeScalar( sql, { srsId} );
+    QVariant roundEarth = conn.executeScalar( sql, { srsId}, QStringLiteral( "QgsHanaProvider" ), QGS_QUERY_LOG_ORIGIN );
     return roundEarth.toString() == QLatin1String( "TRUE" );
   }
 
@@ -515,7 +516,7 @@ QVariant QgsHanaProvider::minimumValue( int index ) const
 
     try
     {
-      return conn->executeScalar( sql );
+      return conn->executeScalar( sql, QStringLiteral( "QgsHanaProvider" ), QGS_QUERY_LOG_ORIGIN );
     }
     catch ( const QgsHanaException &ex )
     {
@@ -537,7 +538,7 @@ QVariant QgsHanaProvider::maximumValue( int index ) const
     QString sql = buildQuery( QStringLiteral( "MAX(%1)" ).arg( QgsHanaUtils::quotedIdentifier( mAttributeFields[ index ].name ) ) );
     try
     {
-      return conn->executeScalar( sql );
+      return conn->executeScalar( sql, QStringLiteral( "QgsHanaProvider" ), QGS_QUERY_LOG_ORIGIN );
     }
     catch ( const QgsHanaException &ex )
     {
@@ -566,7 +567,7 @@ QSet<QVariant> QgsHanaProvider::uniqueValues( int index, int limit ) const
 
     try
     {
-      QgsHanaResultSetRef resultSet = conn->executeQuery( sql );
+      QgsHanaResultSetRef resultSet = conn->executeQuery( sql, QStringLiteral( "QgsHanaProvider" ), QGS_QUERY_LOG_ORIGIN );
       while ( resultSet->next() )
       {
         uniqueValues.insert( resultSet->getValue( 1 ) );
@@ -687,13 +688,13 @@ bool QgsHanaProvider::addFeatures( QgsFeatureList &flist, Flags flags )
 
   try
   {
-    PreparedStatementRef stmtInsert = conn->prepareStatement( sql );
+    PreparedStatementRef stmtInsert = conn->prepareStatement( sql, QStringLiteral( "QgsHanaProvider" ), QGS_QUERY_LOG_ORIGIN );
     PreparedStatementRef stmtIdentityValue;
     if ( !allowBatchInserts )
     {
       QString sqlIdentity = QStringLiteral( "SELECT CURRENT_IDENTITY_VALUE() \"current identity value\" FROM %1.%2" )
                             .arg( QgsHanaUtils::quotedIdentifier( mSchemaName ), QgsHanaUtils::quotedIdentifier( mTableName ) );
-      stmtIdentityValue = conn->prepareStatement( sqlIdentity );
+      stmtIdentityValue = conn->prepareStatement( sqlIdentity, QStringLiteral( "QgsHanaProvider" ), QGS_QUERY_LOG_ORIGIN );
     }
 
     for ( auto &feature : flist )
@@ -835,7 +836,7 @@ bool QgsHanaProvider::deleteFeatures( const QgsFeatureIds &ids )
 
   try
   {
-    conn->execute( sql );
+    conn->execute( sql, QStringLiteral( "QgsHanaProvider" ), QGS_QUERY_LOG_ORIGIN );
     conn->commit();
   }
   catch ( const QgsHanaException &ex )
@@ -867,7 +868,7 @@ bool QgsHanaProvider::truncate()
 
   try
   {
-    conn->execute( sql );
+    conn->execute( sql, QStringLiteral( "QgsHanaProvider" ), QGS_QUERY_LOG_ORIGIN );
     conn->commit();
   }
   catch ( const QgsHanaException &ex )
@@ -906,7 +907,7 @@ bool QgsHanaProvider::addAttributes( const QList<QgsField> &attributes )
 
   try
   {
-    conn->execute( sql );
+    conn->execute( sql, QStringLiteral( "QgsHanaProvider" ), QGS_QUERY_LOG_ORIGIN );
     conn->commit();
   }
   catch ( const QgsHanaException &ex )
@@ -952,7 +953,7 @@ bool QgsHanaProvider::deleteAttributes( const QgsAttributeIds &attributes )
 
   try
   {
-    conn->execute( sql );
+    conn->execute( sql, QStringLiteral( "QgsHanaProvider" ), QGS_QUERY_LOG_ORIGIN );
     conn->commit();
   }
   catch ( const QgsHanaException &ex )
@@ -1045,7 +1046,7 @@ bool QgsHanaProvider::renameAttributes( const QgsFieldNameMap &fieldMap )
                       QgsHanaUtils::quotedIdentifier( mSchemaName ), QgsHanaUtils::quotedIdentifier( mTableName ),
                       QgsHanaUtils::quotedIdentifier( kv.first ),
                       QgsHanaUtils::quotedIdentifier( kv.second ) );
-      conn->execute( sql );
+      conn->execute( sql, QStringLiteral( "QgsHanaProvider" ), QGS_QUERY_LOG_ORIGIN );
     }
 
     conn->commit();
@@ -1089,7 +1090,7 @@ bool QgsHanaProvider::changeGeometryValues( const QgsGeometryMap &geometryMap )
 
   try
   {
-    PreparedStatementRef stmtUpdate = conn->prepareStatement( sql );
+    PreparedStatementRef stmtUpdate = conn->prepareStatement( sql, QStringLiteral( "QgsHanaProvider" ), QGS_QUERY_LOG_ORIGIN );
 
     for ( QgsGeometryMap::const_iterator it = geometryMap.begin(); it != geometryMap.end(); ++it )
     {
@@ -1186,7 +1187,7 @@ bool QgsHanaProvider::changeAttributeValues( const QgsChangedAttributesMap &attr
                             attrs.join( QLatin1Char( ',' ) ),
                             fidWhereClause );
 
-      PreparedStatementRef stmtUpdate = conn->prepareStatement( sql );
+      PreparedStatementRef stmtUpdate = conn->prepareStatement( sql, QStringLiteral( "QgsHanaProvider" ), QGS_QUERY_LOG_ORIGIN );
 
       unsigned short paramIndex = 1;
       for ( QgsAttributeMap::const_iterator attrIt = attrValues.begin(); attrIt != attrValues.end(); ++attrIt )
@@ -1270,7 +1271,7 @@ bool QgsHanaProvider::checkPermissionsAndSetCapabilities( QgsHanaConnection &con
   {
     QString sql = QStringLiteral( "SELECT OBJECT_NAME, OBJECT_TYPE, PRIVILEGE FROM PUBLIC.EFFECTIVE_PRIVILEGES "
                                   "WHERE USER_NAME = CURRENT_USER AND SCHEMA_NAME = ? AND IS_VALID = 'TRUE'" );
-    QgsHanaResultSetRef rsPrivileges = conn.executeQuery( sql, { mSchemaName} );
+    QgsHanaResultSetRef rsPrivileges = conn.executeQuery( sql, { mSchemaName}, QStringLiteral( "QgsHanaProvider" ), QGS_QUERY_LOG_ORIGIN );
     while ( rsPrivileges->next() )
     {
       QString objName = rsPrivileges->getString( 1 );
@@ -1351,7 +1352,7 @@ QgsRectangle QgsHanaProvider::estimateExtent() const
       sql = QStringLiteral( "SELECT ext.ST_XMin(),ext.ST_YMin(),ext.ST_XMax(),ext.ST_YMax() FROM (%1)" ).arg( subQuery );
     }
 
-    QgsHanaResultSetRef rsExtent = conn->executeQuery( sql );
+    QgsHanaResultSetRef rsExtent = conn->executeQuery( sql, QStringLiteral( "QgsHanaProvider" ), QGS_QUERY_LOG_ORIGIN );
     QgsRectangle ret;
     if ( rsExtent->next() )
     {
@@ -1450,7 +1451,7 @@ void QgsHanaProvider::readMetadata( QgsHanaConnection &conn )
   if ( !mIsQuery )
   {
     QString sql = QStringLiteral( "SELECT COMMENTS FROM SYS.TABLES WHERE SCHEMA_NAME = ? AND TABLE_NAME = ?" );
-    QVariant comment = conn.executeScalar( sql, { mSchemaName, mTableName } );
+    QVariant comment = conn.executeScalar( sql, { mSchemaName, mTableName }, QStringLiteral( "QgsHanaProvider" ), QGS_QUERY_LOG_ORIGIN );
     if ( !comment.isNull() )
       mLayerMetadata.setAbstract( comment.toString() );
   }
@@ -1475,7 +1476,7 @@ void QgsHanaProvider::readSrsInformation( QgsHanaConnection &conn )
   bool isRoundEarth = false;
   QString sql = QStringLiteral( "SELECT ROUND_EARTH FROM SYS.ST_SPATIAL_REFERENCE_SYSTEMS "
                                 "WHERE SRS_ID = ?" );
-  QgsHanaResultSetRef rs = conn.executeQuery( sql, { mSrid } );
+  QgsHanaResultSetRef rs = conn.executeQuery( sql, { mSrid }, QStringLiteral( "QgsHanaProvider" ), QGS_QUERY_LOG_ORIGIN );
   if ( rs->next() )
     isRoundEarth = ( rs->getString( 1 ) == QLatin1String( "TRUE" ) );
   rs->close();
@@ -1483,7 +1484,7 @@ void QgsHanaProvider::readSrsInformation( QgsHanaConnection &conn )
   if ( isRoundEarth )
   {
     sql = QStringLiteral( "SELECT COUNT(*) FROM SYS.ST_SPATIAL_REFERENCE_SYSTEMS WHERE SRS_ID = ?" );
-    mHasSrsPlanarEquivalent = conn.executeCountQuery( sql, { QgsHanaUtils::toPlanarSRID( mSrid ) } ) > 0;
+    mHasSrsPlanarEquivalent = conn.executeCountQuery( sql, { QgsHanaUtils::toPlanarSRID( mSrid ) }, QStringLiteral( "QgsHanaProvider" ), QGS_QUERY_LOG_ORIGIN ) > 0;
   }
 }
 
@@ -1524,7 +1525,7 @@ long long QgsHanaProvider::getFeatureCount( const QString &whereClause ) const
   if ( conn.isNull() )
     return -1;
   QString sql = buildQuery( QStringLiteral( "COUNT(*)" ), whereClause );
-  size_t count = conn->executeCountQuery( sql );
+  size_t count = conn->executeCountQuery( sql, QStringLiteral( "QgsHanaProvider" ), QGS_QUERY_LOG_ORIGIN );
   return static_cast<long long>( count );
 }
 
@@ -1656,7 +1657,7 @@ Qgis::VectorExportResult QgsHanaProvider::createEmptyLayer( const QString &uri,
                             "WHERE SRS_ID = ? AND ORGANIZATION = ? AND ORGANIZATION_COORDSYS_ID = ?" );
       try
       {
-        size_t numCrs = conn->executeCountQuery( sql, { static_cast<qulonglong>( srid ), authName, static_cast<qulonglong>( srid ) } );
+        size_t numCrs = conn->executeCountQuery( sql, { static_cast<qulonglong>( srid ), authName, static_cast<qulonglong>( srid ) }, QStringLiteral( "QgsHanaProvider" ), QGS_QUERY_LOG_ORIGIN );
         if ( numCrs == 0 )
           createCoordinateSystem( *conn, srs );
       }
@@ -1673,7 +1674,7 @@ Qgis::VectorExportResult QgsHanaProvider::createEmptyLayer( const QString &uri,
   size_t numTables = 0;
   try
   {
-    numTables =  conn->executeCountQuery( sql, {schemaName, tableName} );
+    numTables =  conn->executeCountQuery( sql, {schemaName, tableName}, QStringLiteral( "QgsHanaProvider" ), QGS_QUERY_LOG_ORIGIN );
   }
   catch ( const QgsHanaException &ex )
   {
@@ -1688,7 +1689,7 @@ Qgis::VectorExportResult QgsHanaProvider::createEmptyLayer( const QString &uri,
     {
       QString sql = QStringLiteral( "DROP TABLE %1.%2" )
                     .arg( QgsHanaUtils::quotedIdentifier( schemaName ), QgsHanaUtils::quotedIdentifier( tableName ) );
-      if ( !conn->execute( sql, errorMessage ) )
+      if ( !conn->execute( sql, errorMessage, QStringLiteral( "QgsHanaProvider" ), QGS_QUERY_LOG_ORIGIN ) )
         return Qgis::VectorExportResult::ErrorCreatingLayer;
     }
     else
@@ -1712,7 +1713,7 @@ Qgis::VectorExportResult QgsHanaProvider::createEmptyLayer( const QString &uri,
                 QgsHanaUtils::quotedIdentifier( geometryColumn ), QString::number( srid ) );
   }
 
-  if ( !conn->execute( sql, errorMessage ) )
+  if ( !conn->execute( sql, errorMessage, QStringLiteral( "QgsHanaProvider" ), QGS_QUERY_LOG_ORIGIN ) )
     return Qgis::VectorExportResult::ErrorCreatingLayer;
 
   dsUri.setDataSource( dsUri.schema(), dsUri.table(), geometryColumn, dsUri.sql(), primaryKey );

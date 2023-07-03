@@ -31,7 +31,7 @@ class QgsHanaUtils
   public:
     QgsHanaUtils() = delete;
 
-    static QString connectionInfo( const QgsDataSourceUri &uri );
+    static QString connectionInfo( const QgsDataSourceUri &uri, bool hidePassword = false );
 
     static QString quotedIdentifier( const QString &str );
     static QString quotedString( const QString &str );

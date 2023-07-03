@@ -300,8 +300,9 @@ QString QgsHanaConnection::connInfo() const
   return QgsHanaUtils::connectionInfo( mUri );
 }
 
-void QgsHanaConnection::execute( const QString &sql )
+void QgsHanaConnection::execute( const QString &sql, const QString &originatorClass, const QString &queryOrigin )
 {
+  std::unique_ptr<QgsDatabaseQueryLogWrapper> logWrapper = createQueryLogWrapper( sql, originatorClass, queryOrigin );
   try
   {
     StatementRef stmt = mConnection->createStatement();
@@ -309,12 +310,14 @@ void QgsHanaConnection::execute( const QString &sql )
   }
   catch ( const Exception &ex )
   {
+    logWrapper->setError( ex.what() );
     throw QgsHanaException( ex.what() );
   }
 }
 
-bool QgsHanaConnection::execute( const QString &sql, QString *errorMessage )
+bool QgsHanaConnection::execute( const QString &sql, QString *errorMessage, const QString &originatorClass, const QString &queryOrigin )
 {
+  std::unique_ptr<QgsDatabaseQueryLogWrapper> logWrapper = createQueryLogWrapper( sql, originatorClass, queryOrigin );
   try
   {
     StatementRef stmt = mConnection->createStatement();
@@ -324,6 +327,7 @@ bool QgsHanaConnection::execute( const QString &sql, QString *errorMessage )
   }
   catch ( const Exception &ex )
   {
+    logWrapper->setError( ex.what() );
     if ( errorMessage )
       *errorMessage = QgsHanaUtils::formatErrorMessage( ex.what() );
   }
@@ -331,8 +335,9 @@ bool QgsHanaConnection::execute( const QString &sql, QString *errorMessage )
   return false;
 }
 
-QgsHanaResultSetRef QgsHanaConnection::executeQuery( const QString &sql )
+QgsHanaResultSetRef QgsHanaConnection::executeQuery( const QString &sql, const QString &originatorClass, const QString &queryOrigin )
 {
+  std::unique_ptr<QgsDatabaseQueryLogWrapper> logWrapper = createQueryLogWrapper( sql, originatorClass, queryOrigin );
   try
   {
     StatementRef stmt = mConnection->createStatement();
@@ -340,12 +345,14 @@ QgsHanaResultSetRef QgsHanaConnection::executeQuery( const QString &sql )
   }
   catch ( const Exception &ex )
   {
+    logWrapper->setError( ex.what() );
     throw QgsHanaException( ex.what() );
   }
 }
 
-QgsHanaResultSetRef QgsHanaConnection::executeQuery( const QString &sql, const QVariantList &args )
+QgsHanaResultSetRef QgsHanaConnection::executeQuery( const QString &sql, const QVariantList &args, const QString &originatorClass, const QString &queryOrigin )
 {
+  std::unique_ptr<QgsDatabaseQueryLogWrapper> logWrapper = createQueryLogWrapper( sql, originatorClass, queryOrigin );
   try
   {
     PreparedStatementRef stmt = createPreparedStatement( sql, args );
@@ -353,12 +360,14 @@ QgsHanaResultSetRef QgsHanaConnection::executeQuery( const QString &sql, const Q
   }
   catch ( const Exception &ex )
   {
+    logWrapper->setError( ex.what() );
     throw QgsHanaException( ex.what() );
   }
 }
 
-size_t QgsHanaConnection::executeCountQuery( const QString &sql )
+size_t QgsHanaConnection::executeCountQuery( const QString &sql, const QString &originatorClass, const QString &queryOrigin )
 {
+  std::unique_ptr<QgsDatabaseQueryLogWrapper> logWrapper = createQueryLogWrapper( sql, originatorClass, queryOrigin );
   try
   {
     StatementRef stmt = mConnection->createStatement();
@@ -370,12 +379,14 @@ size_t QgsHanaConnection::executeCountQuery( const QString &sql )
   }
   catch ( const Exception &ex )
   {
+    logWrapper->setError( ex.what() );
     throw QgsHanaException( ex.what() );
   }
 }
 
-size_t QgsHanaConnection::executeCountQuery( const QString &sql, const QVariantList &args )
+size_t QgsHanaConnection::executeCountQuery( const QString &sql, const QVariantList &args, const QString &originatorClass, const QString &queryOrigin )
 {
+  std::unique_ptr<QgsDatabaseQueryLogWrapper> logWrapper = createQueryLogWrapper( sql, originatorClass, queryOrigin );
   try
   {
     PreparedStatementRef stmt = createPreparedStatement( sql, args );
@@ -387,12 +398,14 @@ size_t QgsHanaConnection::executeCountQuery( const QString &sql, const QVariantL
   }
   catch ( const Exception &ex )
   {
+    logWrapper->setError( ex.what() );
     throw QgsHanaException( ex.what() );
   }
 }
 
-QVariant QgsHanaConnection::executeScalar( const QString &sql )
+QVariant QgsHanaConnection::executeScalar( const QString &sql, const QString &originatorClass, const QString &queryOrigin )
 {
+  std::unique_ptr<QgsDatabaseQueryLogWrapper> logWrapper = createQueryLogWrapper( sql, originatorClass, queryOrigin );
   try
   {
     QVariant res;
@@ -405,12 +418,14 @@ QVariant QgsHanaConnection::executeScalar( const QString &sql )
   }
   catch ( const Exception &ex )
   {
+    logWrapper->setError( ex.what() );
     throw QgsHanaException( ex.what() );
   }
 }
 
-QVariant QgsHanaConnection::executeScalar( const QString &sql, const QVariantList &args )
+QVariant QgsHanaConnection::executeScalar( const QString &sql, const QVariantList &args, const QString &originatorClass, const QString &queryOrigin )
 {
+  std::unique_ptr<QgsDatabaseQueryLogWrapper> logWrapper = createQueryLogWrapper( sql, originatorClass, queryOrigin );
   try
   {
     QVariant res;
@@ -423,18 +438,21 @@ QVariant QgsHanaConnection::executeScalar( const QString &sql, const QVariantLis
   }
   catch ( const Exception &ex )
   {
+    logWrapper->setError( ex.what() );
     throw QgsHanaException( ex.what() );
   }
 }
 
-PreparedStatementRef QgsHanaConnection::prepareStatement( const QString &sql )
+PreparedStatementRef QgsHanaConnection::prepareStatement( const QString &sql, const QString &originatorClass, const QString &queryOrigin )
 {
+  std::unique_ptr<QgsDatabaseQueryLogWrapper> logWrapper = createQueryLogWrapper( sql, originatorClass, queryOrigin );
   try
   {
     return mConnection->prepareStatement( QgsHanaUtils::toUtf16( sql ) );
   }
   catch ( const Exception &ex )
   {
+    logWrapper->setError( ex.what() );
     throw QgsHanaException( ex.what() );
   }
 }
@@ -521,6 +539,7 @@ QgsCoordinateReferenceSystem QgsHanaConnection::getCrs( int srid )
 {
   QgsCoordinateReferenceSystem crs;
   const char *sql = "SELECT ORGANIZATION, ORGANIZATION_COORDSYS_ID, DEFINITION, TRANSFORM_DEFINITION FROM SYS.ST_SPATIAL_REFERENCE_SYSTEMS WHERE SRS_ID = ?";
+  std::unique_ptr<QgsDatabaseQueryLogWrapper> logWrapper = createQueryLogWrapper( sql, QStringLiteral( "QgsHanaConnection" ), QGS_QUERY_LOG_ORIGIN );
 
   try
   {
@@ -555,6 +574,7 @@ QgsCoordinateReferenceSystem QgsHanaConnection::getCrs( int srid )
   }
   catch ( const Exception &ex )
   {
+    logWrapper->setError( ex.what() );
     throw QgsHanaException( ex.what() );
   }
 
@@ -642,16 +662,19 @@ QVector<QgsHanaLayerProperty> QgsHanaConnection::getLayers(
     rsLayers->close();
   };
 
+  QString sql = sqlTables.arg( sqlOwnerFilter, sqlSchemaFilter, sqlDataTypeFilter );
+  std::unique_ptr<QgsDatabaseQueryLogWrapper> logWrapper = createQueryLogWrapper( sql, QStringLiteral( "QgsHanaConnection" ), QGS_QUERY_LOG_ORIGIN );
   try
   {
-    QString sql = sqlTables.arg( sqlOwnerFilter, sqlSchemaFilter, sqlDataTypeFilter );
     addLayers( sql, false );
 
     sql = sqlViews.arg( sqlOwnerFilter, sqlSchemaFilter, sqlDataTypeFilter );
+    logWrapper = createQueryLogWrapper( sql, QStringLiteral( "QgsHanaConnection" ), QGS_QUERY_LOG_ORIGIN );
     addLayers( sql, true );
   }
   catch ( const Exception &ex )
   {
+    logWrapper->setError( ex.what() );
     throw QgsHanaException( ex.what() );
   }
 
@@ -740,6 +763,7 @@ void QgsHanaConnection::readQueryFields( const QString &schemaName, const QStrin
     return clmUniqueness[key].value( columnName, false );
   };
 
+  std::unique_ptr<QgsDatabaseQueryLogWrapper> logWrapper = createQueryLogWrapper( sql, QStringLiteral( "QgsHanaConnection" ), QGS_QUERY_LOG_ORIGIN );
   try
   {
     PreparedStatementRef stmt = prepareStatement( sql );
@@ -778,6 +802,7 @@ void QgsHanaConnection::readQueryFields( const QString &schemaName, const QStrin
   }
   catch ( const Exception &ex )
   {
+    logWrapper->setError( ex.what() );
     throw QgsHanaException( ex.what() );
   }
 }
@@ -934,6 +959,7 @@ Qgis::WkbType QgsHanaConnection::getColumnGeometryType( const QString &querySour
                   querySource,
                   QString::number( GEOMETRIES_SELECT_LIMIT ) );
 
+  std::unique_ptr<QgsDatabaseQueryLogWrapper> logWrapper = createQueryLogWrapper( sql, QStringLiteral( "QgsHanaConnection" ), QGS_QUERY_LOG_ORIGIN );
   try
   {
     StatementRef stmt = mConnection->createStatement();
@@ -956,6 +982,7 @@ Qgis::WkbType QgsHanaConnection::getColumnGeometryType( const QString &querySour
   }
   catch ( const Exception &ex )
   {
+    logWrapper->setError( ex.what() );
     throw QgsHanaException( ex.what() );
   }
 
@@ -974,6 +1001,7 @@ QString QgsHanaConnection::getColumnDataType( const QString &schemaName, const Q
   const char *sql = "SELECT DATA_TYPE_NAME FROM SYS.TABLE_COLUMNS WHERE SCHEMA_NAME = ? AND "
                     "TABLE_NAME = ? AND COLUMN_NAME = ?";
 
+  std::unique_ptr<QgsDatabaseQueryLogWrapper>  logWrapper = createQueryLogWrapper( sql, QStringLiteral( "QgsHanaConnection" ), QGS_QUERY_LOG_ORIGIN );
   QString ret;
   try
   {
@@ -990,6 +1018,7 @@ QString QgsHanaConnection::getColumnDataType( const QString &schemaName, const Q
   }
   catch ( const Exception &ex )
   {
+    logWrapper->setError( ex.what() );
     throw QgsHanaException( ex.what() );
   }
 
@@ -1001,10 +1030,12 @@ int QgsHanaConnection::getColumnSrid( const QString &schemaName, const QString &
   if ( columnName.isEmpty() )
     return -1;
 
+  QString sql = QStringLiteral( "SELECT SRS_ID FROM SYS.ST_GEOMETRY_COLUMNS WHERE SCHEMA_NAME = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?" );
+  std::unique_ptr<QgsDatabaseQueryLogWrapper> logWrapper = createQueryLogWrapper( sql, QStringLiteral( "QgsHanaConnection" ), QGS_QUERY_LOG_ORIGIN );
+
   try
   {
-    PreparedStatementRef stmt = mConnection->prepareStatement( "SELECT SRS_ID FROM SYS.ST_GEOMETRY_COLUMNS "
-                                "WHERE SCHEMA_NAME = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?" );
+    PreparedStatementRef stmt = mConnection->prepareStatement( QgsHanaUtils::toUtf16( sql ) );
     stmt->setNString( 1, NString( schemaName.toStdU16String() ) );
     stmt->setNString( 2, NString( tableName.toStdU16String() ) );
     stmt->setNString( 3, NString( columnName.toStdU16String() ) );
@@ -1012,11 +1043,12 @@ int QgsHanaConnection::getColumnSrid( const QString &schemaName, const QString &
 
     if ( srid == -1 )
     {
-      QString sql = QStringLiteral( "SELECT %1.ST_SRID() FROM %2.%3 WHERE %1 IS NOT NULL LIMIT %4" )
-                    .arg( QgsHanaUtils::quotedIdentifier( columnName ),
-                          QgsHanaUtils::quotedIdentifier( schemaName ),
-                          QgsHanaUtils::quotedIdentifier( tableName ),
-                          QString::number( GEOMETRIES_SELECT_LIMIT ) );
+      sql = QStringLiteral( "SELECT %1.ST_SRID() FROM %2.%3 WHERE %1 IS NOT NULL LIMIT %4" )
+            .arg( QgsHanaUtils::quotedIdentifier( columnName ),
+                  QgsHanaUtils::quotedIdentifier( schemaName ),
+                  QgsHanaUtils::quotedIdentifier( tableName ),
+                  QString::number( GEOMETRIES_SELECT_LIMIT ) );
+      logWrapper = createQueryLogWrapper( sql, QStringLiteral( "QgsHanaConnection" ), QGS_QUERY_LOG_ORIGIN );
       stmt = mConnection->prepareStatement( QgsHanaUtils::toUtf16( sql ) );
       srid = getSrid( stmt );
     }
@@ -1025,6 +1057,7 @@ int QgsHanaConnection::getColumnSrid( const QString &schemaName, const QString &
   }
   catch ( const Exception &ex )
   {
+    logWrapper->setError( ex.what() );
     throw QgsHanaException( ex.what() );
   }
 }
@@ -1034,17 +1067,20 @@ int QgsHanaConnection::getColumnSrid( const QString &sql, const QString &columnN
   if ( columnName.isEmpty() )
     return -1;
 
+  QString query = QStringLiteral( "SELECT %1.ST_SRID() FROM (%2) WHERE %1 IS NOT NULL LIMIT %3" )
+                .arg( QgsHanaUtils::quotedIdentifier( columnName ),
+                      sql,
+                      QString::number( GEOMETRIES_SELECT_LIMIT ) );
+  std::unique_ptr<QgsDatabaseQueryLogWrapper> logWrapper = createQueryLogWrapper( query, QStringLiteral( "QgsHanaConnection" ), QGS_QUERY_LOG_ORIGIN );
+
   try
   {
-    QString query = QStringLiteral( "SELECT %1.ST_SRID() FROM (%2) WHERE %1 IS NOT NULL LIMIT %3" )
-                    .arg( QgsHanaUtils::quotedIdentifier( columnName ),
-                          sql,
-                          QString::number( GEOMETRIES_SELECT_LIMIT ) );
     PreparedStatementRef stmt = mConnection->prepareStatement( QgsHanaUtils::toUtf16( query ) );
     return getSrid( stmt );
   }
   catch ( const Exception &ex )
   {
+    logWrapper->setError( ex.what() );
     throw QgsHanaException( ex.what() );
   }
 }
@@ -1064,10 +1100,10 @@ QgsHanaResultSetRef QgsHanaConnection::getColumns( const QString &schemaName, co
   }
 }
 
-bool  QgsHanaConnection::isTable( const QString &schemaName, const QString &tableName )
+bool QgsHanaConnection::isTable( const QString &schemaName, const QString &tableName )
 {
   QString sql = QStringLiteral( "SELECT COUNT(*) FROM SYS.TABLES WHERE SCHEMA_NAME = ? AND TABLE_NAME = ?" );
-  return executeCountQuery( sql, {schemaName, tableName } ) == 1;
+  return executeCountQuery( sql, {schemaName, tableName }, QStringLiteral( "QgsHanaConnection" ), QGS_QUERY_LOG_ORIGIN ) == 1;
 }
 
 PreparedStatementRef QgsHanaConnection::createPreparedStatement( const QString &sql, const QVariantList &args )
@@ -1104,4 +1140,9 @@ PreparedStatementRef QgsHanaConnection::createPreparedStatement( const QString &
     }
   }
   return stmt;
+}
+
+std::unique_ptr<QgsDatabaseQueryLogWrapper> QgsHanaConnection::createQueryLogWrapper( const QString &sql, const QString &originatorClass, const QString &queryOrigin )
+{
+  return std::make_unique<QgsDatabaseQueryLogWrapper>( sql, QgsHanaUtils::connectionInfo( mUri, true ), QStringLiteral( "hana" ), originatorClass, queryOrigin );
 }

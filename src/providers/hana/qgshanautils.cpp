@@ -38,7 +38,7 @@ namespace
   }
 }
 
-QString QgsHanaUtils::connectionInfo( const QgsDataSourceUri &uri )
+QString QgsHanaUtils::connectionInfo( const QgsDataSourceUri &uri, bool hidePassword )
 {
   QStringList connectionItems;
   auto addItem = [&connectionItems]( const char *key, const QString & value, bool quoted = true )
@@ -76,7 +76,7 @@ QString QgsHanaUtils::connectionInfo( const QgsDataSourceUri &uri )
   {
     addItem( "user", escape( uri.username() ) );
     if ( !uri.password().isEmpty() )
-      addItem( "password", escape( uri.password() ) );
+      addItem( "password", hidePassword ? QStringLiteral( "*****" ) : escape( uri.password() ) );
   }
 
   if ( uri.hasParam( QStringLiteral( "sslEnabled" ) ) )
