@@ -20,10 +20,8 @@
 #include "qgscoordinatereferencesystem.h"
 #include "qgsdatasourceuri.h"
 #include "qgshanatablemodel.h"
-#include "qgshanaresultset.h"
 #include "qgsvectordataprovider.h"
-
-#include "odbc/Forwards.h"
+#include "qgsodbc/qgsodbcconnection.h"
 
 struct AttributeField
 {
@@ -48,6 +46,9 @@ struct AttributeField
 
 using AttributeFields = QVector<AttributeField>;
 
+class QgsOdbcPreparedStatement;
+class QgsOdbcResultSet;
+
 class QgsHanaConnection : public QObject
 {
     Q_OBJECT
@@ -58,14 +59,14 @@ class QgsHanaConnection : public QObject
 
     void execute( const QString &sql );
     bool execute( const QString &sql, QString *errorMessage );
-    QgsHanaResultSetRef executeQuery( const QString &sql );
-    QgsHanaResultSetRef executeQuery( const QString &sql, const QVariantList &args );
+    QgsOdbcResultSet executeQuery( const QString &sql );
+    QgsOdbcResultSet executeQuery( const QString &sql, const QVariantList &args );
     size_t executeCountQuery( const QString &sql );
     size_t executeCountQuery( const QString &sql, const QVariantList &args );
     QVariant executeScalar( const QString &sql );
     QVariant executeScalar( const QString &sql, const QVariantList &args );
 
-    NS_ODBC::PreparedStatementRef prepareStatement( const QString &sql );
+    QgsOdbcPreparedStatement prepareStatement( const QString &sql );
 
     void commit();
     void rollback();
@@ -94,7 +95,7 @@ class QgsHanaConnection : public QObject
     QString getColumnDataType( const QString &schemaName, const QString &tableName, const QString &columnName );
     int getColumnSrid( const QString &schemaName, const QString &tableName, const QString &columnName );
     int getColumnSrid( const QString &sql, const QString &columnName );
-    QgsHanaResultSetRef getColumns( const QString &schemaName, const QString &tableName, const QString &fieldName );
+    QgsOdbcResultSet getColumns( const QString &schemaName, const QString &tableName, const QString &fieldName );
     bool isTable( const QString &schemaName, const QString &tableName );
 
     static QgsHanaConnection *createConnection( const QgsDataSourceUri &uri );
@@ -104,14 +105,12 @@ class QgsHanaConnection : public QObject
     static QStringList connectionList();
 
   private:
-    QgsHanaConnection( NS_ODBC::ConnectionRef connection, const QgsDataSourceUri &uri );
+    QgsHanaConnection( QgsOdbcConnection &&connection, const QgsDataSourceUri &uri );
 
     QStringList getPrimaryKeyCandidates( const QgsHanaLayerProperty &layerProperty );
 
-    NS_ODBC::PreparedStatementRef createPreparedStatement( const QString &sql, const QVariantList &args );
-
   private:
-    NS_ODBC::ConnectionRef mConnection;
+    QgsOdbcConnection mConnection;
     const QgsDataSourceUri mUri;
     QString mDatabaseVersion;
     QString mUserName;

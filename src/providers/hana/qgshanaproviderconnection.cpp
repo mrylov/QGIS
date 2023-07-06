@@ -19,7 +19,6 @@
 #include "qgshanaexception.h"
 #include "qgshanaprimarykeys.h"
 #include "qgshanaprovider.h"
-#include "qgshanaresultset.h"
 #include "qgshanasettings.h"
 #include "qgshanautils.h"
 #include "qgsexception.h"
@@ -27,17 +26,17 @@
 #include "qgsmessagelog.h"
 #include "qgsvectorlayer.h"
 
-#include "odbc/PreparedStatement.h"
+#include "qgsodbc/qgsodbcpreparedstatement.h"
+#include "qgsodbc/qgsodbcresultset.h"
+#include "qgsodbc/qgsodbcresultsetmetadata.h"
 
 #include <chrono>
 
-using namespace NS_ODBC;
-
-QgsHanaProviderResultIterator::QgsHanaProviderResultIterator( QgsHanaConnectionRef &&conn, QgsHanaResultSetRef &&resultSet )
+QgsHanaProviderResultIterator::QgsHanaProviderResultIterator( QgsHanaConnectionRef &&conn, QgsOdbcResultSet &&resultSet )
   : mConnection( std::move( conn ) )
   , mResultSet( std::move( resultSet ) )
-  , mNumColumns( mResultSet->getMetadata().getColumnCount() )
-  , mNextRow( mResultSet->next() )
+  , mNumColumns( mResultSet.getMetadata().getColumnCount() )
+  , mNextRow( mResultSet.next() )
 {}
 
 QVariantList QgsHanaProviderResultIterator::nextRowPrivate()
@@ -49,8 +48,8 @@ QVariantList QgsHanaProviderResultIterator::nextRowPrivate()
   ret.reserve( mNumColumns );
   // cppcheck-suppress unsignedLessThanZero
   for ( unsigned short i = 1; i <= mNumColumns; ++i )
-    ret.push_back( mResultSet->getValue( i ) );
-  mNextRow = mResultSet->next();
+    ret.push_back( mResultSet.getVariant( i ) );
+  mNextRow = mResultSet.next();
   return ret;
 }
 
@@ -136,11 +135,11 @@ void QgsHanaProviderConnection::setCapabilities()
                                         "WHERE USER_NAME = CURRENT_USER AND IS_VALID = 'TRUE'" );
     try
     {
-      QgsHanaResultSetRef rsPrivileges = conn->executeQuery( sql );
-      while ( rsPrivileges->next() )
+      QgsOdbcResultSet rsPrivileges = conn->executeQuery( sql );
+      while ( rsPrivileges.next() )
       {
-        QString objType = rsPrivileges->getString( 1 );
-        QString privType = rsPrivileges->getString( 2 );
+        QString objType = rsPrivileges.getString( 1 );
+        QString privType = rsPrivileges.getString( 2 );
         if ( objType == QLatin1String( "SYSTEMPRIVILEGE" ) )
         {
           if ( privType == QLatin1String( "CREATE SCHEMA" ) )
@@ -152,8 +151,8 @@ void QgsHanaProviderConnection::setCapabilities()
         {
           if ( privType == QLatin1String( "SELECT" ) )
           {
-            QString schemaName = rsPrivileges->getString( 3 );
-            QString objName = rsPrivileges->getString( 4 );
+            QString schemaName = rsPrivileges.getString( 3 );
+            QString objName = rsPrivileges.getString( 4 );
 
             if ( schemaName == QLatin1String( "SYS" ) && objName == QLatin1String( "SCHEMAS" ) )
               mCapabilities |= Capability::Schemas;
@@ -162,7 +161,7 @@ void QgsHanaProviderConnection::setCapabilities()
           }
         }
       }
-      rsPrivileges->close();
+      rsPrivileges.close();
 
       return;
     }
@@ -286,17 +285,17 @@ QgsAbstractDatabaseProviderConnection::QueryResult QgsHanaProviderConnection::ex
 
   try
   {
-    PreparedStatementRef stmt = conn->prepareStatement( sql );
-    bool isQuery = stmt->getMetaDataUnicode()->getColumnCount() > 0;
+    QgsOdbcPreparedStatement stmt = conn->prepareStatement( sql );
+    bool isQuery = stmt.getMetadata().getColumnCount() > 0;
     if ( isQuery )
     {
-      QgsHanaResultSetRef rs = conn->executeQuery( sql );
-      ResultSetMetaDataUnicode &md = rs->getMetadata();
+      QgsOdbcResultSet rs = conn->executeQuery( sql );
+      QgsOdbcResultSetMetadata md = rs.getMetadata();
       unsigned short numColumns = md.getColumnCount();
       QStringList columns;
       columns.reserve( numColumns );
       for ( unsigned short i = 1; i <= numColumns; ++i )
-        columns << QgsHanaUtils::toQString( md.getColumnName( i ) );
+        columns << md.getColumnName( i );
       QueryResult ret( std::make_shared<QgsHanaProviderResultIterator>( std::move( conn ), std::move( rs ) ) );
       for ( unsigned short i = 0; i < numColumns; ++i )
         ret.appendColumn( columns[i] );

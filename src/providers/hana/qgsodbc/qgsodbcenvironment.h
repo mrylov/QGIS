@@ -1,7 +1,7 @@
 /***************************************************************************
-   qgshanadriver.h
+   qgsodbcenvironment.h
    --------------------------------------
-   Date      : 31-05-2019
+   Date      : 05-07-2023
    Copyright : (C) SAP SE
    Author    : Maxim Rylov
  ***************************************************************************/
@@ -14,37 +14,33 @@
  * (at your option) any later version.
  *
  ***************************************************************************/
-#ifndef QGSHANADRIVER_H
-#define QGSHANADRIVER_H
+#ifndef QGSODBCENVIRONMENT_H
+#define QGSODBCENVIRONMENT_H
 
 #include <qglobal.h>
-#include "qgsodbc/qgsodbcenvironment.h"
-#include <QString>
+#include "odbc/Environment.h"
+#include <functional>
 
+class QString;
 class QStringList;
 class QgsOdbcConnection;
 
-class QgsHanaDriver
+class QgsOdbcEnvironment
 {
-  private:
-    QgsHanaDriver();
-    ~QgsHanaDriver();
+  public:
+    QgsOdbcEnvironment();
+
+  protected:
+    Q_DISABLE_COPY( QgsOdbcEnvironment )
 
   public:
     QgsOdbcConnection createConnection();
-    QStringList dataSources();
-    const QString &driver() const;
-
-    static QgsHanaDriver *instance();
-    static bool isInstalled( const QString &name );
-    static bool isValidPath( const QString &path );
-
-  protected:
-    Q_DISABLE_COPY( QgsHanaDriver )
+    QStringList getDataSources();
+    bool isDriverInstalled( const QString &name );
+    void iterateDrivers( const std::function<void( const QString &name, const QString &path )> &callback );
 
   private:
-    QgsOdbcEnvironment mEnv;
-    QString mDriver;
+    NS_ODBC::EnvironmentRef mEnv;
 };
 
-#endif  // QGSHANADRIVER_H
+#endif // QGSODBCENVIRONMENT_H

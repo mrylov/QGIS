@@ -20,7 +20,7 @@
 #include "qgsabstractdatabaseproviderconnection.h"
 #include "qgshanaconnection.h"
 #include "qgshanaconnectionpool.h"
-#include "qgshanaresultset.h"
+#include "qgsodbc/qgsodbcresultset.h"
 
 struct QgsHanaEmptyProviderResultIterator: public QgsAbstractDatabaseProviderConnection::QueryResult::QueryResultIterator
 {
@@ -33,11 +33,11 @@ struct QgsHanaEmptyProviderResultIterator: public QgsAbstractDatabaseProviderCon
 
 struct QgsHanaProviderResultIterator: public QgsAbstractDatabaseProviderConnection::QueryResult::QueryResultIterator
 {
-    QgsHanaProviderResultIterator( QgsHanaConnectionRef &&conn, QgsHanaResultSetRef &&resultSet );
+    QgsHanaProviderResultIterator( QgsHanaConnectionRef &&conn, QgsOdbcResultSet &&resultSet );
 
   private:
     QgsHanaConnectionRef mConnection;
-    QgsHanaResultSetRef mResultSet;
+    QgsOdbcResultSet mResultSet;
     const unsigned short mNumColumns = 0;
     bool mNextRow = false;
 

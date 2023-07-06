@@ -23,8 +23,6 @@
 #include <QTime>
 #include <QDateTime>
 
-using namespace NS_ODBC;
-
 namespace
 {
   QString escape( const QString &val, QChar delim = '\'' )
@@ -195,167 +193,6 @@ QString QgsHanaUtils::toString( Qgis::DistanceUnit unit )
   return QString();
 }
 
-QString QgsHanaUtils::toQString( const NString &str )
-{
-  if ( str.isNull() )
-    return QString();
-  else
-    return QString::fromStdU16String( *str );
-}
-
-QString QgsHanaUtils::toQString( const String &str )
-{
-  if ( str.isNull() )
-    return QString();
-  else
-    return QString::fromUtf8( str->c_str() );
-}
-
-QVariant QgsHanaUtils::toVariant( const Boolean &value )
-{
-  if ( value.isNull() )
-    return QVariant( QVariant::Bool );
-  else
-    return QVariant( *value );
-}
-
-QVariant QgsHanaUtils::toVariant( const Byte &value )
-{
-  if ( value.isNull() )
-    return QVariant( QVariant::Int );
-  else
-    return QVariant( static_cast<int>( *value ) );
-}
-
-QVariant QgsHanaUtils::toVariant( const UByte &value )
-{
-  if ( value.isNull() )
-    return QVariant( QVariant::UInt );
-  else
-    return QVariant( static_cast<uint>( *value ) );
-}
-
-QVariant QgsHanaUtils::toVariant( const Short &value )
-{
-  if ( value.isNull() )
-    return QVariant( QVariant::Int );
-  else
-    return QVariant( static_cast<int>( *value ) );
-}
-
-QVariant QgsHanaUtils::toVariant( const UShort &value )
-{
-  if ( value.isNull() )
-    return QVariant( QVariant::UInt );
-  else
-    return QVariant( static_cast<uint>( *value ) );
-}
-
-QVariant QgsHanaUtils::toVariant( const Int &value )
-{
-  if ( value.isNull() )
-    return QVariant( QVariant::Int );
-  else
-    return QVariant( static_cast<int>( *value ) );
-}
-
-QVariant QgsHanaUtils::toVariant( const UInt &value )
-{
-  if ( value.isNull() )
-    return QVariant( QVariant::UInt );
-  else
-    return QVariant( static_cast<uint>( *value ) );
-}
-
-QVariant QgsHanaUtils::toVariant( const Long &value )
-{
-  if ( value.isNull() )
-    return QVariant( QVariant::LongLong );
-  else
-    return QVariant( static_cast<qlonglong>( *value ) );
-}
-
-QVariant QgsHanaUtils::toVariant( const ULong &value )
-{
-  if ( value.isNull() )
-    return QVariant( QVariant::ULongLong );
-  else
-    return QVariant( static_cast<qulonglong>( *value ) );
-}
-
-QVariant QgsHanaUtils::toVariant( const Float &value )
-{
-  if ( value.isNull() )
-    return QVariant( QVariant::Double );
-  else
-    return QVariant( static_cast<double>( *value ) );
-}
-
-QVariant QgsHanaUtils::toVariant( const Double &value )
-{
-  if ( value.isNull() )
-    return QVariant( QVariant::Double );
-  else
-    return QVariant( *value );
-}
-
-QVariant QgsHanaUtils::toVariant( const Date &value )
-{
-  if ( value.isNull() )
-    return QVariant( QVariant::Date );
-  else
-    return QVariant( QDate( value->year(), value->month(), value->day() ) );
-}
-
-QVariant QgsHanaUtils::toVariant( const Time &value )
-{
-  if ( value.isNull() )
-    return QVariant( QVariant::Time );
-  else
-    return QVariant( QTime( value->hour(), value->minute(), value->second(), 0 ) );
-}
-
-QVariant QgsHanaUtils::toVariant( const Timestamp &value )
-{
-  if ( value.isNull() )
-    return QVariant( QVariant::DateTime );
-  else
-    return QVariant( QDateTime( QDate( value->year(), value->month(), value->day() ),
-                                QTime( value->hour(), value->minute(), value->second(), value->milliseconds() ) ) );
-}
-
-QVariant QgsHanaUtils::toVariant( const String &value )
-{
-  if ( value.isNull() )
-    return QVariant( QVariant::String );
-  else
-    return QVariant( QString::fromUtf8( value->c_str() ) );
-}
-
-QVariant QgsHanaUtils::toVariant( const NString &value )
-{
-  if ( value.isNull() )
-    return QVariant( QVariant::String );
-  else
-    return QVariant( QString::fromStdU16String( *value ) );
-}
-
-QVariant QgsHanaUtils::toVariant( const Binary &value )
-{
-  if ( value.isNull() )
-    return QVariant( QVariant::ByteArray );
-
-  if ( value->size() > static_cast<size_t>( std::numeric_limits<int>::max() ) )
-    throw QgsHanaException( "Binary size is larger than maximum integer value" );
-
-  return QByteArray( value->data(), static_cast<int>( value->size() ) );
-}
-
-const char16_t *QgsHanaUtils::toUtf16( const QString &sql )
-{
-  return reinterpret_cast<const char16_t *>( sql.utf16() );
-}
-
 bool QgsHanaUtils::isGeometryTypeSupported( Qgis::WkbType wkbType )
 {
   switch ( QgsWkbTypes::flatType( wkbType ) )
@@ -374,31 +211,27 @@ bool QgsHanaUtils::isGeometryTypeSupported( Qgis::WkbType wkbType )
   }
 }
 
-Qgis::WkbType QgsHanaUtils::toWkbType( const NS_ODBC::String &type, const NS_ODBC::Int &hasZ, const NS_ODBC::Int &hasM )
+Qgis::WkbType QgsHanaUtils::toWkbType( const QString &type, bool hasZ, bool hasM )
 {
   if ( type.isNull() )
     return Qgis::WkbType::Unknown;
 
-  const bool hasZValue = hasZ.isNull() ? false : *hasZ == 1;
-  const bool hasMValue = hasM.isNull() ? false : *hasM == 1;
-  const QString hanaType( type->c_str() );
-
-  if ( hanaType == QLatin1String( "ST_POINT" ) )
-    return QgsWkbTypes::zmType( Qgis::WkbType::Point, hasZValue, hasMValue );
-  else if ( hanaType == QLatin1String( "ST_MULTIPOINT" ) )
-    return QgsWkbTypes::zmType( Qgis::WkbType::MultiPoint, hasZValue, hasMValue );
-  else if ( hanaType == QLatin1String( "ST_LINESTRING" ) )
-    return QgsWkbTypes::zmType( Qgis::WkbType::LineString, hasZValue, hasMValue );
-  else if ( hanaType == QLatin1String( "ST_MULTILINESTRING" ) )
-    return QgsWkbTypes::zmType( Qgis::WkbType::MultiLineString, hasZValue, hasMValue );
-  else if ( hanaType == QLatin1String( "ST_POLYGON" ) )
-    return QgsWkbTypes::zmType( Qgis::WkbType::Polygon, hasZValue, hasMValue );
-  else if ( hanaType == QLatin1String( "ST_MULTIPOLYGON" ) )
-    return QgsWkbTypes::zmType( Qgis::WkbType::MultiPolygon, hasZValue, hasMValue );
-  else if ( hanaType == QLatin1String( "ST_GEOMETRYCOLLECTION" ) )
-    return QgsWkbTypes::zmType( Qgis::WkbType::GeometryCollection, hasZValue, hasMValue );
-  else if ( hanaType == QLatin1String( "ST_CIRCULARSTRING" ) )
-    return QgsWkbTypes::zmType( Qgis::WkbType::CircularString, hasZValue, hasMValue );
+  if ( type == QLatin1String( "ST_POINT" ) )
+    return QgsWkbTypes::zmType( Qgis::WkbType::Point, hasZ, hasM );
+  else if ( type == QLatin1String( "ST_MULTIPOINT" ) )
+    return QgsWkbTypes::zmType( Qgis::WkbType::MultiPoint, hasZ, hasM );
+  else if ( type == QLatin1String( "ST_LINESTRING" ) )
+    return QgsWkbTypes::zmType( Qgis::WkbType::LineString, hasZ, hasM );
+  else if ( type == QLatin1String( "ST_MULTILINESTRING" ) )
+    return QgsWkbTypes::zmType( Qgis::WkbType::MultiLineString, hasZ, hasM );
+  else if ( type == QLatin1String( "ST_POLYGON" ) )
+    return QgsWkbTypes::zmType( Qgis::WkbType::Polygon, hasZ, hasM );
+  else if ( type == QLatin1String( "ST_MULTIPOLYGON" ) )
+    return QgsWkbTypes::zmType( Qgis::WkbType::MultiPolygon, hasZ, hasM );
+  else if ( type == QLatin1String( "ST_GEOMETRYCOLLECTION" ) )
+    return QgsWkbTypes::zmType( Qgis::WkbType::GeometryCollection, hasZ, hasM );
+  else if ( type == QLatin1String( "ST_CIRCULARSTRING" ) )
+    return QgsWkbTypes::zmType( Qgis::WkbType::CircularString, hasZ, hasM );
   return Qgis::WkbType::Unknown;
 }
 

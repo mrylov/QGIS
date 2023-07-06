@@ -21,10 +21,9 @@
 #include "qgshanaconnectionpool.h"
 #include "qgshanaprimarykeys.h"
 #include "qgshanaprovider.h"
-#include "qgshanaresultset.h"
 #include "qgscoordinatetransform.h"
 
-#include "odbc/Forwards.h"
+#include "qgsodbc/qgsodbcresultset.h"
 
 class QgsHanaFeatureSource : public QgsAbstractFeatureSource
 {
@@ -84,7 +83,7 @@ class QgsHanaFeatureIterator : public QgsAbstractFeatureIteratorFromSource<QgsHa
   private:
     const QVersionNumber mDatabaseVersion;
     QgsHanaConnectionRef mConnection;
-    QgsHanaResultSetRef mResultSet;
+    std::unique_ptr<QgsOdbcResultSet> mResultSet;
     QString mSqlQuery;
     QVariantList mSqlQueryParams;
     QgsRectangle mFilterRect;

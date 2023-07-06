@@ -2,6 +2,13 @@
 # Files
 
 set (HANA_SRCS
+  qgsodbc/qgsodbcconnection.cpp
+  qgsodbc/qgsodbcenvironment.cpp
+  qgsodbc/qgsodbcdatabasemetadata.cpp
+  qgsodbc/qgsodbcpreparedstatement.cpp
+  qgsodbc/qgsodbcresultset.cpp
+  qgsodbc/qgsodbcresultsetmetadata.cpp
+  qgsodbc/qgsodbcstatement.cpp
   qgshanacolumntypethread.cpp
   qgshanaconnection.cpp
   qgshanaconnectionpool.cpp
@@ -13,7 +20,6 @@ set (HANA_SRCS
   qgshanaprimarykeys.cpp
   qgshanaprovider.cpp
   qgshanaproviderconnection.cpp
-  qgshanaresultset.cpp
   qgshanasettings.cpp
   qgshanatablemodel.cpp
   qgshanacrsutils.cpp
@@ -30,6 +36,14 @@ if (WITH_GUI)
 endif()
 
 set(HANA_HDRS
+  qgsodbc/qgsodbccommon.h
+  qgsodbc/qgsodbcconnection.h
+  qgsodbc/qgsodbcenvironment.h
+  qgsodbc/qgsodbcdatabasemetadata.h
+  qgsodbc/qgsodbcpreparedstatement.h
+  qgsodbc/qgsodbcresultset.h
+  qgsodbc/qgsodbcstatement.h
+  qgsodbc/qgsodbcresultsetmetadata.h
   qgshanacolumntypethread.h
   qgshanaconnection.h
   qgshanaconnectionpool.h
@@ -41,7 +55,6 @@ set(HANA_HDRS
   qgshanaprimarykeys.h
   qgshanaprovider.h
   qgshanaproviderconnection.h
-  qgshanaresultset.h
   qgshanasettings.h
   qgshanatablemodel.h
   qgshanacrsutils.h

@@ -1,7 +1,7 @@
 /***************************************************************************
-   qgshanadriver.h
+   qgsodbcstatement.h
    --------------------------------------
-   Date      : 31-05-2019
+   Date      : 05-07-2023
    Copyright : (C) SAP SE
    Author    : Maxim Rylov
  ***************************************************************************/
@@ -14,37 +14,32 @@
  * (at your option) any later version.
  *
  ***************************************************************************/
-#ifndef QGSHANADRIVER_H
-#define QGSHANADRIVER_H
+#ifndef QGSODBCSTATEMENT_H
+#define QGSODBCSTATEMENT_H
 
 #include <qglobal.h>
-#include "qgsodbc/qgsodbcenvironment.h"
-#include <QString>
+#include "odbc/Statement.h"
 
-class QStringList;
-class QgsOdbcConnection;
+class QString;
+class QgsOdbcResultSet;
 
-class QgsHanaDriver
+class QgsOdbcStatement
 {
   private:
-    QgsHanaDriver();
-    ~QgsHanaDriver();
-
-  public:
-    QgsOdbcConnection createConnection();
-    QStringList dataSources();
-    const QString &driver() const;
-
-    static QgsHanaDriver *instance();
-    static bool isInstalled( const QString &name );
-    static bool isValidPath( const QString &path );
-
-  protected:
-    Q_DISABLE_COPY( QgsHanaDriver )
+    friend class QgsOdbcConnection;
 
   private:
-    QgsOdbcEnvironment mEnv;
-    QString mDriver;
+    QgsOdbcStatement( NS_ODBC::StatementRef &&stmt );
+
+  protected:
+    Q_DISABLE_COPY( QgsOdbcStatement )
+
+  public:
+    void execute( const QString &sql );
+    QgsOdbcResultSet executeQuery( const QString &sql );
+
+  private:
+    NS_ODBC::StatementRef mStatement;
 };
 
-#endif  // QGSHANADRIVER_H
+#endif // QGSODBCSTATEMENT_H

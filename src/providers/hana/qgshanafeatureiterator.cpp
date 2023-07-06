@@ -139,7 +139,7 @@ bool QgsHanaFeatureIterator::rewind()
     return false;
 
   mResultSet.reset();
-  mResultSet = mConnection->executeQuery( mSqlQuery, mSqlQueryParams );
+  mResultSet = std::make_unique<QgsOdbcResultSet>( mConnection->executeQuery( mSqlQuery, mSqlQueryParams ) );
 
   return true;
 }
@@ -185,7 +185,7 @@ bool QgsHanaFeatureIterator::fetchFeature( QgsFeature &feature )
         case QgsHanaPrimaryKeyType::PktInt:
         {
           int idx = mSource->mPrimaryKeyAttrs.at( 0 );
-          QVariant v = mResultSet->getValue( paramIndex );
+          QVariant v = mResultSet->getVariant( paramIndex );
           if ( !subsetOfAttributes || fetchAttributes.contains( idx ) )
             feature.setAttribute( idx, v );
           fid = QgsHanaPrimaryKeyUtils::intToFid( v.toInt() );
@@ -195,7 +195,7 @@ bool QgsHanaFeatureIterator::fetchFeature( QgsFeature &feature )
         case QgsHanaPrimaryKeyType::PktInt64:
         {
           int idx = mSource->mPrimaryKeyAttrs.at( 0 );
-          QVariant v = mResultSet->getValue( paramIndex );
+          QVariant v = mResultSet->getVariant( paramIndex );
           if ( !subsetOfAttributes || fetchAttributes.contains( idx ) )
             feature.setAttribute( idx, v );
           fid = mSource->mPrimaryKeyCntx->lookupFid( QVariantList( { v} ) );
@@ -208,7 +208,7 @@ bool QgsHanaFeatureIterator::fetchFeature( QgsFeature &feature )
           pkValues.reserve( mSource->mPrimaryKeyAttrs.size() );
           for ( int idx : std::as_const( mSource->mPrimaryKeyAttrs ) )
           {
-            QVariant v = mResultSet->getValue( paramIndex );
+            QVariant v = mResultSet->getVariant( paramIndex );
             pkValues << v;
             if ( !subsetOfAttributes || fetchAttributes.contains( idx ) )
               feature.setAttribute( idx, v );
@@ -229,7 +229,7 @@ bool QgsHanaFeatureIterator::fetchFeature( QgsFeature &feature )
     {
       for ( int idx : std::as_const( mAttributesToFetch ) )
       {
-        feature.setAttribute( idx, mResultSet->getValue( paramIndex ) );
+        feature.setAttribute( idx, mResultSet->getVariant( paramIndex ) );
         ++paramIndex;
       }
     }

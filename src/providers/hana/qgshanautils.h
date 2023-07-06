@@ -24,8 +24,6 @@
 #include <QVariant>
 #include <QVersionNumber>
 
-#include "odbc/Types.h"
-
 class QgsHanaUtils
 {
   public:
@@ -41,29 +39,8 @@ class QgsHanaUtils
 
     static QString toString( Qgis::DistanceUnit unit );
 
-    static QString toQString( const NS_ODBC::NString &str );
-    static QString toQString( const NS_ODBC::String &str );
-    static QVariant toVariant( const NS_ODBC::Boolean &value );
-    static QVariant toVariant( const NS_ODBC::Byte &value );
-    static QVariant toVariant( const NS_ODBC::UByte &value );
-    static QVariant toVariant( const NS_ODBC::Short &value );
-    static QVariant toVariant( const NS_ODBC::UShort &value );
-    static QVariant toVariant( const NS_ODBC::Int &value );
-    static QVariant toVariant( const NS_ODBC::UInt &value );
-    static QVariant toVariant( const NS_ODBC::Long &value );
-    static QVariant toVariant( const NS_ODBC::ULong &value );
-    static QVariant toVariant( const NS_ODBC::Float &value );
-    static QVariant toVariant( const NS_ODBC::Double &value );
-    static QVariant toVariant( const NS_ODBC::Date &value );
-    static QVariant toVariant( const NS_ODBC::Time &value );
-    static QVariant toVariant( const NS_ODBC::Timestamp &value );
-    static QVariant toVariant( const NS_ODBC::String &value );
-    static QVariant toVariant( const NS_ODBC::NString &value );
-    static QVariant toVariant( const NS_ODBC::Binary &value );
-
-    static const char16_t *toUtf16( const QString &sql );
     static bool isGeometryTypeSupported( Qgis::WkbType wkbType );
-    static Qgis::WkbType toWkbType( const NS_ODBC::String &type, const NS_ODBC::Int &hasZ, const NS_ODBC::Int &hasM );
+    static Qgis::WkbType toWkbType( const QString &type, bool hasZ, bool hasM );
     static QVersionNumber toHANAVersion( const QString &dbVersion );
     static int toPlanarSRID( int srid );
     static bool convertField( QgsField &field );

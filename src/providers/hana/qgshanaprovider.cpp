@@ -29,7 +29,6 @@
 #include "qgshanaprimarykeys.h"
 #include "qgshanaprovider.h"
 #include "qgshanaproviderconnection.h"
-#include "qgshanaresultset.h"
 #include "qgshanacrsutils.h"
 #include "qgshanautils.h"
 #include "qgshanadataitems.h"
@@ -38,11 +37,9 @@
 
 #include <QtGlobal>
 
-#include "odbc/PreparedStatement.h"
-#include "odbc/ResultSet.h"
-#include "odbc/ResultSetMetaDataUnicode.h"
+#include "qgsodbc/qgsodbcpreparedstatement.h"
+#include "qgsodbc/qgsodbcresultset.h"
 
-using namespace NS_ODBC;
 using namespace std;
 
 namespace
@@ -175,137 +172,10 @@ namespace
     return roundEarth.toString() == QLatin1String( "TRUE" );
   }
 
-  void setStatementValue(
-    PreparedStatementRef &stmt,
-    unsigned short paramIndex,
-    const AttributeField &field,
-    const QVariant &value )
-  {
-    bool isNull = ( value.isNull() || !value.isValid() );
-
-    switch ( field.type )
-    {
-      case SQLDataTypes::Bit:
-      case SQLDataTypes::Boolean:
-        stmt->setBoolean( paramIndex, isNull ? Boolean() : Boolean( value.toBool() ) );
-        break;
-      case SQLDataTypes::TinyInt:
-        if ( field.isSigned )
-          stmt->setByte( paramIndex, isNull ? Byte() : Byte( static_cast<int8_t>( value.toInt() ) ) );
-        else
-          stmt->setUByte( paramIndex, isNull ? UByte() : UByte( static_cast<uint8_t>( value.toUInt() ) ) );
-        break;
-      case SQLDataTypes::SmallInt:
-        if ( field.isSigned )
-          stmt->setShort( paramIndex, isNull ? Short() : Short( static_cast<int16_t>( value.toInt() ) ) );
-        else
-          stmt->setUShort( paramIndex, isNull ? UShort() : UShort( static_cast<uint16_t>( value.toUInt() ) ) );
-        break;
-      case SQLDataTypes::Integer:
-        if ( field.isSigned )
-          stmt->setInt( paramIndex, isNull ? Int() : Int( value.toInt() ) );
-        else
-          stmt->setUInt( paramIndex, isNull ? UInt() : UInt( value.toUInt() ) );
-        break;
-      case SQLDataTypes::BigInt:
-        if ( field.isSigned )
-          stmt->setLong( paramIndex, isNull ? Long() : Long( value.toLongLong() ) );
-        else
-          stmt->setULong( paramIndex, isNull ? ULong() : ULong( value.toULongLong() ) );
-        break;
-      case SQLDataTypes::Numeric:
-      case SQLDataTypes::Decimal:
-        if ( isNull )
-          stmt->setDouble( paramIndex, Double() );
-        else
-        {
-          double dvalue = value.toDouble();
-          stmt->setDouble( paramIndex, Double( dvalue ) );
-        }
-        break;
-      case SQLDataTypes::Real:
-        stmt->setFloat( paramIndex, isNull ? Float() : Float( value.toFloat() ) );
-        break;
-      case SQLDataTypes::Float:
-      case SQLDataTypes::Double:
-        stmt->setDouble( paramIndex, isNull ? Double() : Double( value.toDouble() ) );
-        break;
-      case SQLDataTypes::Date:
-      case SQLDataTypes::TypeDate:
-        if ( isNull )
-          stmt->setDate( paramIndex, Date() );
-        else
-        {
-          QDate d = value.toDate();
-          stmt->setDate( paramIndex, makeNullable<date>( d.year(), d.month(), d.day() ) );
-        }
-        break;
-      case SQLDataTypes::Time:
-      case SQLDataTypes::TypeTime:
-        if ( isNull )
-          stmt->setTime( paramIndex, Time() );
-        else
-        {
-          QTime t = value.toTime();
-          stmt->setTime( paramIndex, makeNullable<NS_ODBC::time>( t.hour(), t.minute(), t.second() ) );
-        }
-        break;
-      case SQLDataTypes::Timestamp:
-      case SQLDataTypes::TypeTimestamp:
-        if ( isNull )
-          stmt->setTimestamp( paramIndex, Timestamp() );
-        else
-        {
-          QDateTime dt = value.toDateTime();
-          QDate d = dt.date();
-          QTime t = dt.time();
-          stmt->setTimestamp( paramIndex, makeNullable<NS_ODBC::timestamp>( d.year(),
-                              d.month(), d.day(), t.hour(), t.minute(), t.second(), t.msec() ) );
-        }
-        break;
-      case SQLDataTypes::Char:
-      case SQLDataTypes::VarChar:
-      case SQLDataTypes::LongVarChar:
-        stmt->setString( paramIndex, isNull ? String() : String( value.toString().toStdString() ) );
-        break;
-      case SQLDataTypes::WChar:
-      case SQLDataTypes::WVarChar:
-      case SQLDataTypes::WLongVarChar:
-        stmt->setNString( paramIndex, isNull ? NString() : NString( value.toString().toStdU16String() ) );
-        break;
-      case SQLDataTypes::Binary:
-      case SQLDataTypes::VarBinary:
-      case SQLDataTypes::LongVarBinary:
-        if ( isNull )
-          stmt->setBinary( paramIndex, Binary() );
-        else
-        {
-          QByteArray arr = value.toByteArray();
-          stmt->setBinary( paramIndex, Binary( vector<char>( arr.begin(), arr.end() ) ) );
-        }
-        break;
-      default:
-        if ( field.isGeometry() )
-        {
-          if ( value.type() == QVariant::String )
-            stmt->setString( paramIndex, isNull ? String() : String( value.toString().toStdString() ) );
-          else if ( value.type() == QVariant::ByteArray )
-          {
-            QByteArray arr = value.toByteArray();
-            stmt->setBinary( paramIndex, isNull ? Binary() :  Binary( vector<char>( arr.begin(), arr.end() ) ) );
-          }
-        }
-        else
-          QgsDebugError( QStringLiteral( "Unknown value type ('%1') for parameter %2" )
-                         .arg( QString::number( field.type ), QString::number( paramIndex ) ) );
-        break;
-    }
-  }
 
   void setStatementFidValue(
-    PreparedStatementRef &stmt,
+    QgsOdbcPreparedStatement &stmt,
     unsigned short paramIndex,
-    const AttributeFields &fields,
     QgsHanaPrimaryKeyType pkType,
     const QList<int> &pkAttrs,
     QgsHanaPrimaryKeyContext &pkContext,
@@ -314,14 +184,14 @@ namespace
     switch ( pkType )
     {
       case QgsHanaPrimaryKeyType::PktInt:
-        stmt->setInt( paramIndex, QgsHanaPrimaryKeyUtils::fidToInt( featureId ) );
+        stmt.setInt( paramIndex, QgsHanaPrimaryKeyUtils::fidToInt( featureId ) );
         break;
       case QgsHanaPrimaryKeyType::PktInt64:
       {
         QVariantList pkValues = pkContext.lookupKey( featureId );
         if ( pkValues.empty() )
           throw QgsHanaException( QStringLiteral( "Key values for feature %1 not found." ).arg( featureId ) );
-        setStatementValue( stmt, paramIndex, fields.at( pkAttrs[0] ), pkValues[0] );
+        stmt.setVariant( paramIndex, pkValues[0] );
       }
       break;
       case QgsHanaPrimaryKeyType::PktFidMap:
@@ -335,7 +205,7 @@ namespace
         {
           const QVariant &value = pkValues[i];
           Q_ASSERT( !value.isNull() );
-          setStatementValue( stmt, static_cast<unsigned short>( paramIndex + i ), fields.at( pkAttrs[i] ), value );
+          stmt.setVariant( static_cast<unsigned short>( paramIndex + i ), value );
         }
       }
       break;
@@ -566,12 +436,12 @@ QSet<QVariant> QgsHanaProvider::uniqueValues( int index, int limit ) const
 
     try
     {
-      QgsHanaResultSetRef resultSet = conn->executeQuery( sql );
-      while ( resultSet->next() )
+      QgsOdbcResultSet resultSet = conn->executeQuery( sql );
+      while ( resultSet.next() )
       {
-        uniqueValues.insert( resultSet->getValue( 1 ) );
+        uniqueValues.insert( resultSet.getVariant( 1 ) );
       }
-      resultSet->close();
+      resultSet.close();
     }
     catch ( const QgsHanaException &ex )
     {
@@ -687,13 +557,13 @@ bool QgsHanaProvider::addFeatures( QgsFeatureList &flist, Flags flags )
 
   try
   {
-    PreparedStatementRef stmtInsert = conn->prepareStatement( sql );
-    PreparedStatementRef stmtIdentityValue;
+    QgsOdbcPreparedStatement stmtInsert = conn->prepareStatement( sql );
+    unique_ptr<QgsOdbcPreparedStatement> stmtIdentityValue;
     if ( !allowBatchInserts )
     {
       QString sqlIdentity = QStringLiteral( "SELECT CURRENT_IDENTITY_VALUE() \"current identity value\" FROM %1.%2" )
                             .arg( QgsHanaUtils::quotedIdentifier( mSchemaName ), QgsHanaUtils::quotedIdentifier( mTableName ) );
-      stmtIdentityValue = conn->prepareStatement( sqlIdentity );
+      stmtIdentityValue = make_unique<QgsOdbcPreparedStatement>( conn->prepareStatement( sqlIdentity ) );
     }
 
     for ( auto &feature : flist )
@@ -711,12 +581,11 @@ bool QgsHanaProvider::addFeatures( QgsFeatureList &flist, Flags flags )
                                     .arg( QgsWkbTypes::displayString( geom.wkbType() ), QgsWkbTypes::displayString( wkbType() ) ).toStdString().c_str() );
           }
 
-          QByteArray wkb = geom.asWkb();
-          stmtInsert->setBinary( paramIndex, makeNullable<vector<char>>( wkb.begin(), wkb.end() ) );
+          stmtInsert.setBinary( paramIndex, geom.asWkb() );
         }
         else
         {
-          stmtInsert->setBinary( paramIndex, Binary() );
+          stmtInsert.setBinary( paramIndex, QByteArray() );
         }
 
         ++paramIndex;
@@ -741,21 +610,21 @@ bool QgsHanaProvider::addFeatures( QgsFeatureList &flist, Flags flags )
             attrValue = mDefaultValues[fieldIndex];
         }
 
-        setStatementValue( stmtInsert, paramIndex, field, attrValue );
+        stmtInsert.setVariant( paramIndex, attrValue );
         ++paramIndex;
       }
 
       if ( allowBatchInserts )
       {
-        stmtInsert->addBatch();
+        stmtInsert.addBatch();
 
-        if ( stmtInsert->getBatchDataSize() >= MAXIMUM_BATCH_DATA_SIZE )
-          stmtInsert->executeBatch();
+        if ( stmtInsert.getBatchDataSize() >= MAXIMUM_BATCH_DATA_SIZE )
+          stmtInsert.executeBatch();
       }
       else
       {
-        stmtInsert->executeUpdate();
-        stmtInsert->clearParameters();
+        stmtInsert.executeUpdate();
+        stmtInsert.clearParameters();
 
         if ( hasIdValue )
         {
@@ -774,20 +643,20 @@ bool QgsHanaProvider::addFeatures( QgsFeatureList &flist, Flags flags )
         }
         else
         {
-          ResultSetRef rsIdentity = stmtIdentityValue->executeQuery();
-          if ( rsIdentity->next() )
+          QgsOdbcResultSet rsIdentity = stmtIdentityValue->executeQuery();
+          if ( rsIdentity.next() )
           {
-            NS_ODBC::Long id = rsIdentity->getLong( 1 );
+            QgsOdbcNullable<int64_t> id = rsIdentity.getLong( 1 );
             if ( !id.isNull() )
               feature.setId( static_cast<QgsFeatureId>( *id ) );
           }
-          rsIdentity->close();
+          rsIdentity.close();
         }
       }
     }
 
-    if ( allowBatchInserts && stmtInsert->getBatchDataSize() > 0 )
-      stmtInsert->executeBatch();
+    if ( allowBatchInserts && stmtInsert.getBatchDataSize() > 0 )
+      stmtInsert.executeBatch();
 
     conn->commit();
 
@@ -1089,7 +958,7 @@ bool QgsHanaProvider::changeGeometryValues( const QgsGeometryMap &geometryMap )
 
   try
   {
-    PreparedStatementRef stmtUpdate = conn->prepareStatement( sql );
+    QgsOdbcPreparedStatement stmtUpdate = conn->prepareStatement( sql );
 
     for ( QgsGeometryMap::const_iterator it = geometryMap.begin(); it != geometryMap.end(); ++it )
     {
@@ -1098,17 +967,16 @@ bool QgsHanaProvider::changeGeometryValues( const QgsGeometryMap &geometryMap )
       if ( FID_IS_NEW( fid ) )
         continue;
 
-      QByteArray wkb = it->asWkb();
-      stmtUpdate->setBinary( 1, makeNullable<vector<char>>( wkb.begin(), wkb.end() ) );
-      setStatementFidValue( stmtUpdate, 2, mAttributeFields, mPrimaryKeyType, mPrimaryKeyAttrs, *mPrimaryKeyCntx, fid );
-      stmtUpdate->addBatch();
+      stmtUpdate.setBinary( 1, it->asWkb() );
+      setStatementFidValue( stmtUpdate, 2, mPrimaryKeyType, mPrimaryKeyAttrs, *mPrimaryKeyCntx, fid );
+      stmtUpdate.addBatch();
 
-      if ( stmtUpdate->getBatchDataSize() >= MAXIMUM_BATCH_DATA_SIZE )
-        stmtUpdate->executeBatch();
+      if ( stmtUpdate.getBatchDataSize() >= MAXIMUM_BATCH_DATA_SIZE )
+        stmtUpdate.executeBatch();
     }
 
-    if ( stmtUpdate->getBatchDataSize() > 0 )
-      stmtUpdate->executeBatch();
+    if ( stmtUpdate.getBatchDataSize() > 0 )
+      stmtUpdate.executeBatch();
 
     conn->commit();
   }
@@ -1186,7 +1054,7 @@ bool QgsHanaProvider::changeAttributeValues( const QgsChangedAttributesMap &attr
                             attrs.join( QLatin1Char( ',' ) ),
                             fidWhereClause );
 
-      PreparedStatementRef stmtUpdate = conn->prepareStatement( sql );
+      QgsOdbcPreparedStatement stmtUpdate = conn->prepareStatement( sql );
 
       unsigned short paramIndex = 1;
       for ( QgsAttributeMap::const_iterator attrIt = attrValues.begin(); attrIt != attrValues.end(); ++attrIt )
@@ -1197,13 +1065,13 @@ bool QgsHanaProvider::changeAttributeValues( const QgsChangedAttributesMap &attr
         if ( field.name.isEmpty() || field.isAutoIncrement )
           continue;
 
-        setStatementValue( stmtUpdate, paramIndex, field, *attrIt );
+        stmtUpdate.setVariant( paramIndex, *attrIt );
         ++paramIndex;
       }
 
-      setStatementFidValue( stmtUpdate, paramIndex, mAttributeFields, mPrimaryKeyType, mPrimaryKeyAttrs, *mPrimaryKeyCntx, fid );
+      setStatementFidValue( stmtUpdate, paramIndex, mPrimaryKeyType, mPrimaryKeyAttrs, *mPrimaryKeyCntx, fid );
 
-      stmtUpdate->executeUpdate();
+      stmtUpdate.executeUpdate();
 
       if ( pkChanged )
         updateFeatureIdMap( fid, attrValues );
@@ -1270,15 +1138,15 @@ bool QgsHanaProvider::checkPermissionsAndSetCapabilities( QgsHanaConnection &con
   {
     QString sql = QStringLiteral( "SELECT OBJECT_NAME, OBJECT_TYPE, PRIVILEGE FROM PUBLIC.EFFECTIVE_PRIVILEGES "
                                   "WHERE USER_NAME = CURRENT_USER AND SCHEMA_NAME = ? AND IS_VALID = 'TRUE'" );
-    QgsHanaResultSetRef rsPrivileges = conn.executeQuery( sql, { mSchemaName} );
-    while ( rsPrivileges->next() )
+    QgsOdbcResultSet rsPrivileges = conn.executeQuery( sql, { mSchemaName} );
+    while ( rsPrivileges.next() )
     {
-      QString objName = rsPrivileges->getString( 1 );
+      QString objName = rsPrivileges.getString( 1 );
 
       if ( !objName.isEmpty() && objName != mTableName )
         continue;
 
-      QString privType = rsPrivileges->getString( 3 );
+      QString privType = rsPrivileges.getString( 3 );
 
       if ( privType == QLatin1String( "ALL PRIVILEGES" ) || privType == QLatin1String( "CREATE ANY" ) )
       {
@@ -1309,7 +1177,7 @@ bool QgsHanaProvider::checkPermissionsAndSetCapabilities( QgsHanaConnection &con
                            | QgsVectorDataProvider::ChangeGeometries;
       }
     }
-    rsPrivileges->close();
+    rsPrivileges.close();
   }
 
   // TODO needs to be implemented in QgsHanaFeatureIterator class
@@ -1351,20 +1219,20 @@ QgsRectangle QgsHanaProvider::estimateExtent() const
       sql = QStringLiteral( "SELECT ext.ST_XMin(),ext.ST_YMin(),ext.ST_XMax(),ext.ST_YMax() FROM (%1)" ).arg( subQuery );
     }
 
-    QgsHanaResultSetRef rsExtent = conn->executeQuery( sql );
+    QgsOdbcResultSet rsExtent = conn->executeQuery( sql );
     QgsRectangle ret;
-    if ( rsExtent->next() )
+    if ( rsExtent.next() )
     {
-      QVariant val = rsExtent->getValue( 1 );
+      auto val = rsExtent.getDouble( 1 );
       if ( !val.isNull() )
       {
-        ret.setXMinimum( val.toDouble() );
-        ret.setYMinimum( rsExtent->getValue( 2 ).toDouble() );
-        ret.setXMaximum( rsExtent->getValue( 3 ).toDouble() );
-        ret.setYMaximum( rsExtent->getValue( 4 ).toDouble() );
+        ret.setXMinimum( *val );
+        ret.setYMinimum( *rsExtent.getDouble( 2 ) );
+        ret.setXMaximum( *rsExtent.getDouble( 3 ) );
+        ret.setYMaximum( *rsExtent.getDouble( 4 ) );
       }
     }
-    rsExtent->close();
+    rsExtent.close();
     return ret;
   }
   catch ( const QgsHanaException &ex )
@@ -1391,14 +1259,14 @@ void QgsHanaProvider::readAttributeFields( QgsHanaConnection &conn )
     if ( defaultValues.contains( key ) )
       return defaultValues[key].value( columnName );
 
-    QgsHanaResultSetRef rsColumns = conn.getColumns( schemaName, tableName, QStringLiteral( "%" ) );
-    while ( rsColumns->next() )
+    QgsOdbcResultSet rsColumns = conn.getColumns( schemaName, tableName, QStringLiteral( "%" ) );
+    while ( rsColumns.next() )
     {
-      QString name = rsColumns->getString( 4 /*COLUMN_NAME*/ );
-      QVariant value = rsColumns->getValue( 13 /*COLUMN_DEF*/ );
+      QString name = rsColumns.getString( 4 /*COLUMN_NAME*/ );
+      QVariant value = rsColumns.getVariant( 13 /*COLUMN_DEF*/ );
       defaultValues[key].insert( name, value );
     }
-    rsColumns->close();
+    rsColumns.close();
     return defaultValues[key].value( columnName );
   };
 
@@ -1475,10 +1343,10 @@ void QgsHanaProvider::readSrsInformation( QgsHanaConnection &conn )
   bool isRoundEarth = false;
   QString sql = QStringLiteral( "SELECT ROUND_EARTH FROM SYS.ST_SPATIAL_REFERENCE_SYSTEMS "
                                 "WHERE SRS_ID = ?" );
-  QgsHanaResultSetRef rs = conn.executeQuery( sql, { mSrid } );
-  if ( rs->next() )
-    isRoundEarth = ( rs->getString( 1 ) == QLatin1String( "TRUE" ) );
-  rs->close();
+  QgsOdbcResultSet rs = conn.executeQuery( sql, { mSrid } );
+  if ( rs.next() )
+    isRoundEarth = ( rs.getString( 1 ) == QLatin1String( "TRUE" ) );
+  rs.close();
 
   if ( isRoundEarth )
   {
@@ -1719,7 +1587,7 @@ Qgis::VectorExportResult QgsHanaProvider::createEmptyLayer( const QString &uri,
   dsUri.setSrid( QString::number( srid ) );
 
   QgsDataProvider::ProviderOptions providerOptions;
-  unique_ptr< QgsHanaProvider > provider = std::make_unique< QgsHanaProvider >( dsUri.uri( false ), providerOptions );
+  unique_ptr< QgsHanaProvider > provider = make_unique< QgsHanaProvider >( dsUri.uri( false ), providerOptions );
 
   if ( !provider->isValid() )
   {

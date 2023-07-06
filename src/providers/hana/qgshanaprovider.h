@@ -25,8 +25,6 @@
 
 #include <QVersionNumber>
 
-#include "odbc/Forwards.h"
-
 class QgsFeature;
 class QgsField;
 class QDomDocument;
