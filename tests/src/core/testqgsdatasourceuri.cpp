@@ -35,6 +35,8 @@ class TestQgsDataSourceUri: public QObject
     void checkConnectionInfo_data();
     void checkAuthParams();
     void checkParameterKeys();
+    void checkRemovePassword();
+    void checkUnicodeUri();
 };
 
 void TestQgsDataSourceUri::checkparser_data()
@@ -194,6 +196,75 @@ void TestQgsDataSourceUri::checkparser_data()
       << "mydb" // dbname
       << "myhost" // host
       << "5432" // port
+      << "" // driver
+      << QgsDataSourceUri::SslPrefer // sslmode
+      << "" // sql
+      << "" // myparam
+      << "public" // schema
+      ;
+
+  QTest::newRow( "arcgis rest sql" )
+      << "crs='EPSG:2154' filter='' url='https://carto.isogeo.net/server/rest/services/scan_services_1/EMS_EFS_WMS_WFS/FeatureServer/2' table='' sql=abc='def'"
+      << "" // table
+      << "" // geometrycolumn
+      << "" // key
+      << false // estimatedmetadata
+      << "" // srid
+      << Qgis::WkbType::Unknown // type
+      << false // selectatid
+      << "" // service
+      << "" // user
+      << "" // password
+      << "" // authcfg
+      << "" // dbname
+      << "" // host
+      << "" // port
+      << "" // driver
+      << QgsDataSourceUri::SslPrefer // sslmode
+      << "abc='def'" // sql
+      << "" // myparam
+      << "public" // schema
+      ;
+
+  QTest::newRow( "arcgis rest empty sql" )
+      << "crs='EPSG:2154' filter='' url='https://carto.isogeo.net/server/rest/services/scan_services_1/EMS_EFS_WMS_WFS/FeatureServer/2' table='' sql=''"
+      << "" // table
+      << "" // geometrycolumn
+      << "" // key
+      << false // estimatedmetadata
+      << "" // srid
+      << Qgis::WkbType::Unknown // type
+      << false // selectatid
+      << "" // service
+      << "" // user
+      << "" // password
+      << "" // authcfg
+      << "" // dbname
+      << "" // host
+      << "" // port
+      << "" // driver
+      << QgsDataSourceUri::SslPrefer // sslmode
+      << "" // sql
+      << "" // myparam
+      << "public" // schema
+      ;
+
+  QTest::newRow( "arcgis rest empty sql 2" )
+      << "crs='EPSG:2154' filter='' url='https://carto.isogeo.net/server/rest/services/scan_services_1/EMS_EFS_WMS_WFS/FeatureServer/2' table='' sql=\"\""
+      << "" // table
+      << "" // geometrycolumn
+      << "" // key
+      << false // estimatedmetadata
+      << "" // srid
+      << Qgis::WkbType::Unknown // type
+      << false // selectatid
+      << "" // service
+      << "" // user
+      << "" // password
+      << "" // authcfg
+      << "" // dbname
+      << "" // host
+      << "" // port
       << "" // driver
       << QgsDataSourceUri::SslPrefer // sslmode
       << "" // sql
@@ -523,6 +594,26 @@ void TestQgsDataSourceUri::checkParameterKeys()
   QVERIFY( uri.parameterKeys().contains( QLatin1String( "dbname" ) ) );
   QVERIFY( uri.parameterKeys().contains( QLatin1String( "bar" ) ) );
 }
+
+void TestQgsDataSourceUri::checkRemovePassword()
+{
+  const QString uri0 = QgsDataSourceUri::removePassword( QStringLiteral( "postgresql://user:password@127.0.0.1:5432?dbname=test" ) );
+  QCOMPARE( uri0, QStringLiteral( "postgresql://user@127.0.0.1:5432?dbname=test" ) );
+
+  const QString uri1 = QgsDataSourceUri::removePassword( QStringLiteral( "postgresql://user:password@127.0.0.1:5432?dbname=test" ), true );
+  QCOMPARE( uri1, QStringLiteral( "postgresql://user:XXXXXXXX@127.0.0.1:5432?dbname=test" ) );
+
+  const QString uri2 = QgsDataSourceUri::removePassword( QStringLiteral( "postgresql://user@127.0.0.1:5432?dbname=test" ) );
+  QCOMPARE( uri2, QStringLiteral( "postgresql://user@127.0.0.1:5432?dbname=test" ) );
+}
+
+void TestQgsDataSourceUri::checkUnicodeUri()
+{
+  QgsDataSourceUri uri;
+  uri.setEncodedUri( QStringLiteral( "url=file:///directory/テスト.mbtiles&type=mbtiles" ) );
+  QCOMPARE( uri.param( QStringLiteral( "url" ) ), QStringLiteral( "file:///directory/テスト.mbtiles" ) );
+}
+
 
 QGSTEST_MAIN( TestQgsDataSourceUri )
 #include "testqgsdatasourceuri.moc"

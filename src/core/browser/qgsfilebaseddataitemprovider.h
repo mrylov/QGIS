@@ -171,6 +171,12 @@ class CORE_EXPORT QgsFileDataCollectionItem final: public QgsDataCollectionItem
      */
     Qgis::DatabaseProviderConnectionCapabilities2 databaseConnectionCapabilities2() const;
 
+    /**
+     * Returns the sublayers.
+     * \since QGIS 3.38
+     */
+    QList<QgsProviderSublayerDetails> sublayers() const;
+
   private:
 
     QList< QgsProviderSublayerDetails> mSublayers;
@@ -196,7 +202,7 @@ class CORE_EXPORT QgsFileBasedDataItemProvider : public QgsDataItemProvider
   public:
 
     QString name() override;
-    int capabilities() const override;
+    Qgis::DataItemProviderCapabilities capabilities() const override;
     QgsDataItem *createDataItem( const QString &path, QgsDataItem *parentItem ) override SIP_FACTORY;
     bool handlesDirectoryPath( const QString &path ) override;
 };

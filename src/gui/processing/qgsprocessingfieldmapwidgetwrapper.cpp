@@ -46,7 +46,7 @@ QgsProcessingFieldMapPanelWidget::QgsProcessingFieldMapPanelWidget( QWidget *par
   mFieldsView->setDestinationEditable( true );
 
   mLayerCombo->setAllowEmptyLayer( true );
-  mLayerCombo->setFilters( QgsMapLayerProxyModel::VectorLayer );
+  mLayerCombo->setFilters( Qgis::LayerFilter::VectorLayer );
 
   connect( mResetButton, &QPushButton::clicked, this, &QgsProcessingFieldMapPanelWidget::loadFieldsFromLayer );
   connect( mAddButton, &QPushButton::clicked, this, &QgsProcessingFieldMapPanelWidget::addField );
@@ -266,7 +266,7 @@ QgsProcessingFieldMapParameterDefinitionWidget::QgsProcessingFieldMapParameterDe
   setLayout( vlayout );
 }
 
-QgsProcessingParameterDefinition *QgsProcessingFieldMapParameterDefinitionWidget::createParameter( const QString &name, const QString &description, QgsProcessingParameterDefinition::Flags flags ) const
+QgsProcessingParameterDefinition *QgsProcessingFieldMapParameterDefinitionWidget::createParameter( const QString &name, const QString &description, Qgis::ProcessingParameterFlags flags ) const
 {
   auto param = std::make_unique< QgsProcessingParameterFieldMapping >( name, description, mParentLayerComboBox->currentData().toString() );
   param->setFlags( flags );

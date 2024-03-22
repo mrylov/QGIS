@@ -63,64 +63,64 @@ class GridInverseDistance(GdalAlgorithm):
     def initAlgorithm(self, config=None):
         self.addParameter(QgsProcessingParameterFeatureSource(self.INPUT,
                                                               self.tr('Point layer'),
-                                                              [QgsProcessing.TypeVectorPoint]))
+                                                              [QgsProcessing.SourceType.TypeVectorPoint]))
 
         z_field_param = QgsProcessingParameterField(self.Z_FIELD,
                                                     self.tr('Z value from field'),
                                                     None,
                                                     self.INPUT,
-                                                    QgsProcessingParameterField.Numeric,
+                                                    QgsProcessingParameterField.DataType.Numeric,
                                                     optional=True)
-        z_field_param.setFlags(z_field_param.flags() | QgsProcessingParameterDefinition.FlagAdvanced)
+        z_field_param.setFlags(z_field_param.flags() | QgsProcessingParameterDefinition.Flag.FlagAdvanced)
         self.addParameter(z_field_param)
 
         self.addParameter(QgsProcessingParameterNumber(self.POWER,
                                                        self.tr('Weighting power'),
-                                                       type=QgsProcessingParameterNumber.Double,
+                                                       type=QgsProcessingParameterNumber.Type.Double,
                                                        minValue=0.0,
                                                        maxValue=100.0,
                                                        defaultValue=2.0))
         self.addParameter(QgsProcessingParameterNumber(self.SMOOTHING,
                                                        self.tr('Smoothing'),
-                                                       type=QgsProcessingParameterNumber.Double,
+                                                       type=QgsProcessingParameterNumber.Type.Double,
                                                        minValue=0.0,
                                                        defaultValue=0.0))
         self.addParameter(QgsProcessingParameterNumber(self.RADIUS_1,
                                                        self.tr('The first radius of search ellipse'),
-                                                       type=QgsProcessingParameterNumber.Double,
+                                                       type=QgsProcessingParameterNumber.Type.Double,
                                                        minValue=0.0,
                                                        defaultValue=0.0))
         self.addParameter(QgsProcessingParameterNumber(self.RADIUS_2,
                                                        self.tr('The second radius of search ellipse'),
-                                                       type=QgsProcessingParameterNumber.Double,
+                                                       type=QgsProcessingParameterNumber.Type.Double,
                                                        minValue=0.0,
                                                        defaultValue=0.0))
         self.addParameter(QgsProcessingParameterNumber(self.ANGLE,
                                                        self.tr('Angle of search ellipse rotation in degrees (counter clockwise)'),
-                                                       type=QgsProcessingParameterNumber.Double,
+                                                       type=QgsProcessingParameterNumber.Type.Double,
                                                        minValue=0.0,
                                                        maxValue=360.0,
                                                        defaultValue=0.0))
         self.addParameter(QgsProcessingParameterNumber(self.MAX_POINTS,
                                                        self.tr('Maximum number of data points to use'),
-                                                       type=QgsProcessingParameterNumber.Integer,
+                                                       type=QgsProcessingParameterNumber.Type.Integer,
                                                        minValue=0,
                                                        defaultValue=0))
         self.addParameter(QgsProcessingParameterNumber(self.MIN_POINTS,
                                                        self.tr('Minimum number of data points to use'),
-                                                       type=QgsProcessingParameterNumber.Integer,
+                                                       type=QgsProcessingParameterNumber.Type.Integer,
                                                        minValue=0,
                                                        defaultValue=0))
         self.addParameter(QgsProcessingParameterNumber(self.NODATA,
                                                        self.tr('NODATA marker to fill empty points'),
-                                                       type=QgsProcessingParameterNumber.Double,
+                                                       type=QgsProcessingParameterNumber.Type.Double,
                                                        defaultValue=0.0))
 
         options_param = QgsProcessingParameterString(self.OPTIONS,
                                                      self.tr('Additional creation options'),
                                                      defaultValue='',
                                                      optional=True)
-        options_param.setFlags(options_param.flags() | QgsProcessingParameterDefinition.FlagAdvanced)
+        options_param.setFlags(options_param.flags() | QgsProcessingParameterDefinition.Flag.FlagAdvanced)
         options_param.setMetadata({
             'widget_wrapper': {
                 'class': 'processing.algs.gdal.ui.RasterOptionsWidget.RasterOptionsWidgetWrapper'}})
@@ -130,7 +130,7 @@ class GridInverseDistance(GdalAlgorithm):
                                                    self.tr('Additional command-line parameters'),
                                                    defaultValue=None,
                                                    optional=True)
-        extra_param.setFlags(extra_param.flags() | QgsProcessingParameterDefinition.FlagAdvanced)
+        extra_param.setFlags(extra_param.flags() | QgsProcessingParameterDefinition.Flag.FlagAdvanced)
         self.addParameter(extra_param)
 
         dataType_param = QgsProcessingParameterEnum(self.DATA_TYPE,
@@ -138,7 +138,7 @@ class GridInverseDistance(GdalAlgorithm):
                                                     self.TYPES,
                                                     allowMultiple=False,
                                                     defaultValue=5)
-        dataType_param.setFlags(dataType_param.flags() | QgsProcessingParameterDefinition.FlagAdvanced)
+        dataType_param.setFlags(dataType_param.flags() | QgsProcessingParameterDefinition.Flag.FlagAdvanced)
         self.addParameter(dataType_param)
 
         self.addParameter(QgsProcessingParameterRasterDestination(self.OUTPUT,
@@ -195,8 +195,13 @@ class GridInverseDistance(GdalAlgorithm):
 
         out = self.parameterAsOutputLayer(parameters, self.OUTPUT, context)
         self.setOutputValue(self.OUTPUT, out)
+
+        output_format = QgsRasterFileWriter.driverForExtension(os.path.splitext(out)[1])
+        if not output_format:
+            raise QgsProcessingException(self.tr('Output format is invalid'))
+
         arguments.append('-of')
-        arguments.append(QgsRasterFileWriter.driverForExtension(os.path.splitext(out)[1]))
+        arguments.append(output_format)
 
         options = self.parameterAsString(parameters, self.OPTIONS, context)
         if options:

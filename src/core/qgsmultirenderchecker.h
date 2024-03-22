@@ -50,7 +50,6 @@ class QgsLayout;
  * For every control image, the allowed mismatch and color tolerance values will be calculated
  * individually.
  *
- * \since QGIS 2.8
  */
 
 class CORE_EXPORT QgsMultiRenderChecker
@@ -71,6 +70,16 @@ class CORE_EXPORT QgsMultiRenderChecker
      */
     void setControlName( const QString &name );
 
+    /**
+     * Sets the source \a file, \a function and \a line from where the test originates.
+     *
+     * \since QGIS 3.36
+     */
+    void setFileFunctionLine( const QString &file, const QString &function, int line );
+
+    /**
+     * Sets the path \a prefix where the control images are kept.
+     */
     void setControlPathPrefix( const QString &prefix );
 
     /**
@@ -108,7 +117,6 @@ class CORE_EXPORT QgsMultiRenderChecker
      * Sets the largest allowable difference in size between the rendered and the expected image.
      * \param xTolerance x tolerance in pixels
      * \param yTolerance y tolerance in pixels
-     * \since QGIS 3.0
      */
     void setSizeTolerance( int xTolerance, int yTolerance ) { mMaxSizeDifferenceX = xTolerance; mMaxSizeDifferenceY = yTolerance; }
 
@@ -128,11 +136,23 @@ class CORE_EXPORT QgsMultiRenderChecker
     bool runTest( const QString &testName, unsigned int mismatchCount = 0 );
 
     /**
-     * Returns a report for this test.
+     * Returns a HTML report for this test.
      *
      * The report will be empty if the test was successfully run.
+     *
+     * \see markdownReport()
      */
     QString report() const;
+
+    /**
+     * Returns a markdown report for this test.
+     *
+     * The report will be empty if the test was successfully run.
+     *
+     * \see report()
+     * \since QGIS 3.34
+     */
+    QString markdownReport() const;
 
     /**
      * Returns the path to the control images.
@@ -146,8 +166,18 @@ class CORE_EXPORT QgsMultiRenderChecker
     static void drawBackground( QImage *image ) { QgsRenderChecker::drawBackground( image ); }
 
   private:
+    QString mSourceFile;
+    QString mSourceFunction;
+    int mSourceLine = -1;
+
     bool mResult = false;
+
+    QString mReportHeader;
     QString mReport;
+
+    QString mMarkdownReportHeader;
+    QString mMarkdownReport;
+
     QString mRenderedImage;
     QString mControlName;
     QString mControlPathPrefix;
@@ -166,7 +196,6 @@ class CORE_EXPORT QgsMultiRenderChecker
  * \ingroup core
  * \class QgsLayoutChecker
  * \brief Renders a layout to an image and compares with an expected output
- * \since QGIS 3.0
  */
 class CORE_EXPORT QgsLayoutChecker : public QgsMultiRenderChecker
 {

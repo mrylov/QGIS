@@ -9,8 +9,6 @@ the Free Software Foundation; either version 2 of the License, or
 __author__ = 'Alessandro Pasotti'
 __date__ = '12/03/2020'
 __copyright__ = 'Copyright 2019, The QGIS Project'
-# This will get replaced with a git SHA1 when you do a git archive
-__revision__ = '$Format:%H$'
 
 import os
 
@@ -114,22 +112,22 @@ class TestPyQgsProviderConnectionMssql(unittest.TestCase, TestPyQgsProviderConne
 
         conn = md.createConnection(self.uri, {})
         schemas = conn.schemas()
-        self.assertTrue('dbo' in schemas)
-        self.assertTrue('qgis_test' in schemas)
+        self.assertIn('dbo', schemas)
+        self.assertIn('qgis_test', schemas)
         filterUri = QgsDataSourceUri(self.uri)
         filterUri.setParam('excludedSchemas', 'dbo')
         conn = md.createConnection(filterUri.uri(), {})
         schemas = conn.schemas()
-        self.assertFalse('dbo' in schemas)
-        self.assertTrue('qgis_test' in schemas)
+        self.assertNotIn('dbo', schemas)
+        self.assertIn('qgis_test', schemas)
 
         # Store the connection
         conn.store('filteredConnection')
 
         otherConn = md.createConnection('filteredConnection')
         schemas = otherConn.schemas()
-        self.assertFalse('dbo' in schemas)
-        self.assertTrue('qgis_test' in schemas)
+        self.assertNotIn('dbo', schemas)
+        self.assertIn('qgis_test', schemas)
 
     def test_exec_sql(self):
 

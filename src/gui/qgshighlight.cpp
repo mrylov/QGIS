@@ -179,8 +179,8 @@ void QgsHighlight::setSymbol( QgsSymbol *symbol, const QgsRenderContext &context
       {
         simpleFill->setStrokeWidth( getSymbolWidth( context, simpleFill->strokeWidth(), simpleFill->outputUnit() ) );
       }
-      symbolLayer->setDataDefinedProperty( QgsSymbolLayer::PropertyFillColor, QgsProperty() );
-      symbolLayer->setDataDefinedProperty( QgsSymbolLayer::PropertyStrokeColor, QgsProperty() );
+      symbolLayer->setDataDefinedProperty( QgsSymbolLayer::Property::FillColor, QgsProperty() );
+      symbolLayer->setDataDefinedProperty( QgsSymbolLayer::Property::StrokeColor, QgsProperty() );
     }
   }
 }
@@ -393,7 +393,7 @@ void QgsHighlight::paint( QPainter *p )
           if ( alpha > 0 )
           {
             int green = qGreen( line[c] );
-            line[c] = qRgba( penRed, penGreen, penBlue, std::clamp( static_cast< int >( alpha - ( green * k ) ), 0, 255 ) );
+            line[c] = qRgba( penRed, penGreen, penBlue, std::clamp( static_cast< int >( alpha - ( green * k ) ), 30, 255 ) );
           }
         }
       }

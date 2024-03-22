@@ -109,7 +109,8 @@ bool QgsOapifProvider::init()
 
   mShared->mServerMaxFeatures = apiRequest.maxLimit();
 
-  if ( mShared->mURI.maxNumFeatures() > 0 && mShared->mServerMaxFeatures > 0 && !mShared->mURI.pagingEnabled() )
+  const bool pagingEnabled = mShared->mURI.pagingStatus() != QgsWFSDataSourceURI::PagingStatus::DISABLED;
+  if ( mShared->mURI.maxNumFeatures() > 0 && mShared->mServerMaxFeatures > 0 && !pagingEnabled )
   {
     mShared->mMaxFeatures = std::min( mShared->mURI.maxNumFeatures(), mShared->mServerMaxFeatures );
   }
@@ -117,12 +118,12 @@ bool QgsOapifProvider::init()
   {
     mShared->mMaxFeatures = mShared->mURI.maxNumFeatures();
   }
-  else if ( mShared->mServerMaxFeatures > 0 && !mShared->mURI.pagingEnabled() )
+  else if ( mShared->mServerMaxFeatures > 0 && !pagingEnabled )
   {
     mShared->mMaxFeatures = mShared->mServerMaxFeatures;
   }
 
-  if ( mShared->mURI.pagingEnabled() && mShared->mURI.pageSize() > 0 )
+  if ( pagingEnabled && mShared->mURI.pageSize() > 0 )
   {
     if ( mShared->mServerMaxFeatures > 0 )
     {
@@ -133,7 +134,7 @@ bool QgsOapifProvider::init()
       mShared->mPageSize = mShared->mURI.pageSize();
     }
   }
-  else if ( mShared->mURI.pagingEnabled() )
+  else if ( pagingEnabled )
   {
     if ( apiRequest.defaultLimit() > 0 && apiRequest.maxLimit() > 0 )
     {
@@ -229,8 +230,16 @@ bool QgsOapifProvider::init()
     QgsCoordinateTransform ct( collectionRequest->collection().mBboxCrs, mShared->mSourceCrs, transformContext() );
     ct.setBallparkTransformsAreAppropriate( true );
     QgsDebugMsgLevel( "before ext:" + mShared->mCapabilityExtent.toString(), 4 );
-    mShared->mCapabilityExtent = ct.transformBoundingBox( mShared->mCapabilityExtent );
-    QgsDebugMsgLevel( "after ext:" + mShared->mCapabilityExtent.toString(), 4 );
+    try
+    {
+      mShared->mCapabilityExtent = ct.transformBoundingBox( mShared->mCapabilityExtent );
+      QgsDebugMsgLevel( "after ext:" + mShared->mCapabilityExtent.toString(), 4 );
+    }
+    catch ( const QgsCsException &e )
+    {
+      QgsMessageLog::logMessage( tr( "Cannot compute layer extent: %1" ).arg( e.what() ), tr( "OAPIF" ) );
+      mShared->mCapabilityExtent = QgsRectangle();
+    }
   }
 
   // Merge contact info from /api
@@ -267,6 +276,29 @@ bool QgsOapifProvider::init()
   if ( mShared->mCapabilityExtent.isNull() )
   {
     mShared->mCapabilityExtent = itemsRequest.bbox();
+    if ( !mShared->mCapabilityExtent.isNull() )
+    {
+      QgsCoordinateReferenceSystem defaultCrs =
+        QgsCoordinateReferenceSystem::fromOgcWmsCrs(
+          QgsOapifProvider::OAPIF_PROVIDER_DEFAULT_CRS );
+      if ( defaultCrs != mShared->mSourceCrs )
+      {
+        QgsCoordinateTransform ct( defaultCrs, mShared->mSourceCrs, transformContext() );
+        ct.setBallparkTransformsAreAppropriate( true );
+        QgsDebugMsgLevel( "before ext:" + mShared->mCapabilityExtent.toString(), 4 );
+        try
+        {
+          mShared->mCapabilityExtent = ct.transformBoundingBox( mShared->mCapabilityExtent );
+          QgsDebugMsgLevel( "after ext:" + mShared->mCapabilityExtent.toString(), 4 );
+        }
+        catch ( const QgsCsException &e )
+        {
+          QgsMessageLog::logMessage( tr( "Cannot compute layer extent: %1" ).arg( e.what() ), tr( "OAPIF" ) );
+          mShared->mCapabilityExtent = QgsRectangle();
+        }
+      }
+    }
+
   }
 
   mShared->mFields = itemsRequest.fields();
@@ -336,12 +368,14 @@ long long QgsOapifProvider::featureCount() const
     QgsFeature f;
     QgsFeatureRequest request;
     request.setNoAttributes();
+    constexpr int MAX_FEATURES = 1000;
+    request.setLimit( MAX_FEATURES + 1 );
     auto iter = getFeatures( request );
     long long count = 0;
     bool countExact = true;
     while ( iter.nextFeature( f ) )
     {
-      if ( count == 1000 ) // to avoid too long processing time
+      if ( count == MAX_FEATURES ) // to avoid too long processing time
       {
         countExact = false;
         break;
@@ -446,7 +480,7 @@ bool QgsOapifProvider::empty() const
   QgsFeature f;
   QgsFeatureRequest request;
   request.setNoAttributes();
-  request.setFlags( QgsFeatureRequest::NoGeometry );
+  request.setFlags( Qgis::FeatureRequestFlag::NoGeometry );
 
   // Whoops, the provider returns an empty iterator when we are using
   // a setLimit call in combination with a subsetString.

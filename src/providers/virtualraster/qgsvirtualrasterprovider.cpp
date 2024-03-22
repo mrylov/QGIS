@@ -215,6 +215,11 @@ QgsRasterBlock *QgsVirtualRasterProvider::block( int bandNo, const QgsRectangle 
   return tblock.release();
 }
 
+Qgis::DataProviderFlags QgsVirtualRasterProvider::flags() const
+{
+  return Qgis::DataProviderFlag::FastExtent2D;
+}
+
 QgsRectangle QgsVirtualRasterProvider::extent() const
 {
   return mExtent;
@@ -337,7 +342,7 @@ QString QgsVirtualRasterProvider::lastError()
   return QStringLiteral( "Not implemented" );
 }
 
-QString QgsVirtualRasterProvider::htmlMetadata()
+QString QgsVirtualRasterProvider::htmlMetadata() const
 {
   //only test
   return "Virtual Raster data provider";

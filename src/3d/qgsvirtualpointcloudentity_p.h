@@ -60,7 +60,7 @@ class QgsVirtualPointCloudEntity : public Qgs3DMapSceneEntity
                                 double zValueScale, double zValueOffset, int pointBudget );
 
     //! This is called when the camera moves. It's responsible for loading new indexes and decides if subindex will be rendered as bbox or chunked entity.
-    void handleSceneUpdate( const SceneState &state ) override;
+    void handleSceneUpdate( const SceneContext &sceneContext ) override;
 
     QgsRange<float> getNearFarPlaneRange( const QMatrix4x4 &viewMatrix ) const override;
 
@@ -74,6 +74,9 @@ class QgsVirtualPointCloudEntity : public Qgs3DMapSceneEntity
 
     //! If \a asBbox is TRUE only the bounding box will be rendered for the sub index \a i. If it is FALSE, the sub index will be rendered as a chunked entity.
     void setRenderSubIndexAsBbox( int i, bool asBbox );
+
+  signals:
+    void subIndexNeedsLoading( int i );
 
   private:
     //! Updates the Bbox child entity to display the sub indexes set with setRenderSubIndexAsBbox()

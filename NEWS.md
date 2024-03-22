@@ -1,5 +1,84 @@
 Change history for the QGIS Project
 
+# What's new in Version 3.36 'Maidenhead'?
+
+This release has following new features:
+
+- Temporal: "Movie Mode" for the temporal controller
+- User Interface: Add map layers custom properties to the information tab
+- User Interface: Shortcut to define 3D scene extent on 2D canvas
+- Symbology: Add height setting for raster fill symbol layer type
+- Symbology: New "Filled line" symbol layer type
+- Mesh: Mesh labeling
+- 3D Features: Allow data defined color control for simple 3d line rendering
+- 3D Features: Improved lighting controls for Phong Material
+- 3D Features: Physically based metal rough material
+- Point Clouds: Size override for point cloud classification
+- Point Clouds: Add "Render as a surface" option to 2D point cloud renderers
+- Point Clouds: Faster point cloud rendering by caching decoded data blocks
+- Expressions: Alias of minimum/maximum for min/max in aggregates
+- Expressions: Counter variable in array_foreach expressions
+- Expressions: Improved expression insertion
+- Data Management: Add a Toggle Selection Button in the Organize columns window
+- Processing: Add --skip-loading-plugins flag for qgis_process
+- Processing: Click-through output paths in processing logs
+- Processing: GEOS coverage simplify processing algorithm
+- Processing: Processing algorithm to convert B3DM to GLTF
+- Application and Project Options: Use "localhost" for OAuth2 Redirects
+- Application and Project Options: Support for serial port sensor baudrate selection
+- Browser: Open layers with Datasource Manager from browser
+- Data Providers: SensorThings Data Provider
+- Data Providers: Drop OTB Processing provider
+- Data Providers: WFS provider - Handle documents with Complex Feature schemas and JSON'ify content of complex properties
+- QGIS Server: WMS GetMap in PDF Format
+- QGIS Server: QGIS Server Properties Tab for Vector Tile Layers
+- QGIS Server: GetLegendGraphics JSON rule
+- QGIS Server: Add maptip for raster layer GetFeatureInfo
+- QGIS Server: Add WMS parameter value to request only maptip for HTML feature info response
+- QGIS Server: Option to skip "name" attribute for groups in WMS GetCapabilities
+- Plugins: Use active layer when importing vector data with DB Manager
+- Programmability: Expose 3D views to PyQGIS
+-
+
+
+# What's new in Version 3.34 'Prizren'?
+
+This release has following new features:
+
+- Map Tools: Optional enforcement of "dot" as decimal separator for measure tool
+- Map Tools: Show a highlight on identified raster pixels when using identify tool
+- Map Tools: Show raster row/column of clicked point in identify results
+- Symbology: Settings for overriding selection color and selection symbol for vector layers
+- Labelling: Toggle labels for Vector Tile Layers
+- Rendering: "Sticky" Map Decorations
+- Rendering: Add map render profiler
+- Rendering: Add choice of two different modes for "Refresh Layer at Interval"
+- 3D Features: Allow GPU memory limit configuration
+- 3D Features: Add support for boundingbox3d
+- Print Layouts: Select multiple layout items
+- Print Layouts: Layout Page number reflected in page properties
+- Print Layouts: Automatically open exported layouts
+- Expressions: Add bearing expression function
+- Expressions: Add "layer_crs_ellipsoid"
+- Digitising: Improve "avoid overlap" type awareness
+- Data Management: Improve save vector features handling for pre-existing files
+- Data Management: Maintain relations for copied features
+- Analysis Tools: Support raster band description
+- Processing: Antialias setting for raster tile processing plugin
+- Processing: Create Grid row_index and col_index fields
+- Processing: New 'Calculate expression' algorithm for use in models
+- Processing: Add algorithm to convert content from a GLTF/GLB file to standard vector layer features
+- Processing: Port SAGA "DTM Filter (slope-based)" tool to a native QGIS algorithm
+- Application and Project Options: Clear recently opened project list
+- Application and Project Options: OAUTH2 PKCE Authorization Code
+- Application and Project Options: Set processing defaults from QGIS configuration file
+- Profile Plots: Add setting to control background color for elevation profile charts
+- Data Providers: Discover relations for Oracle provider
+- Plugins: Drop interactive shell from GRASS C++ Plugin
+- Programmability: Function to export runtime profiler model content as text
+-
+
+
 # What's new in Version 3.32 'Lima'?
 
 This release has following new features:

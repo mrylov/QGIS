@@ -32,13 +32,14 @@ class QgsVectorLayer;
 /**
  * \ingroup core
  * \brief This is a container for configuration of the snapping of the project
- * \since QGIS 3.0
  */
 class CORE_EXPORT QgsSnappingConfig
 {
     Q_GADGET
 
     Q_PROPERTY( QgsProject *project READ project WRITE setProject )
+    Q_PROPERTY( bool enabled READ enabled WRITE setEnabled )
+    Q_PROPERTY( Qgis::SnappingMode mode READ mode WRITE setMode )
 
   public:
 
@@ -102,7 +103,6 @@ class CORE_EXPORT QgsSnappingConfig
     /**
      * \ingroup core
      * \brief This is a container of advanced configuration (per layer) of the snapping of the project
-     * \since QGIS 3.0
      */
     class CORE_EXPORT IndividualLayerSettings
     {
@@ -403,14 +403,12 @@ class CORE_EXPORT QgsSnappingConfig
     /**
      * Reads the configuration from the specified QGIS project document.
      *
-     * \since QGIS 3.0
      */
     void readProject( const QDomDocument &doc );
 
     /**
      * Writes the configuration to the specified QGIS project document.
      *
-     * \since QGIS 3.0
      */
     void writeProject( QDomDocument &doc );
 
@@ -422,7 +420,6 @@ class CORE_EXPORT QgsSnappingConfig
      *
      * \returns TRUE if changes have been done.
      *
-     * \since QGIS 3.0
      */
     bool addLayers( const QList<QgsMapLayer *> &layers );
 
@@ -434,21 +431,18 @@ class CORE_EXPORT QgsSnappingConfig
      *
      * \returns TRUE if changes have been done.
      *
-     * \since QGIS 3.0
      */
     bool removeLayers( const QList<QgsMapLayer *> &layers );
 
     /**
      * The project from which the snapped layers should be retrieved
      *
-     * \since QGIS 3.0
      */
     QgsProject *project() const;
 
     /**
      * The project from which the snapped layers should be retrieved
      *
-     * \since QGIS 3.0
      */
     void setProject( QgsProject *project );
 

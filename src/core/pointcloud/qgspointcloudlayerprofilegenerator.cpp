@@ -470,6 +470,10 @@ bool QgsPointCloudLayerProfileGenerator::generateProfile( const QgsProfileGenera
   }
   double rootErrorPixels = rootErrorInMapCoordinates / mapUnitsPerPixel; // in pixels
   const QVector<IndexedPointCloudNode> nodes = traverseTree( pc, pc->root(), maximumErrorPixels, rootErrorPixels, context.elevationRange() );
+  if ( nodes.empty() )
+  {
+    return false;
+  }
 
   const double rootErrorInLayerCoordinates = rootNodeExtentLayerCoords.width() / pc->span();
   const double maxErrorInMapCoordinates = maximumErrorPixels * mapUnitsPerPixel;
@@ -587,7 +591,8 @@ QVector<IndexedPointCloudNode> QgsPointCloudLayerProfileGenerator::traverseTree(
   if ( !mSearchGeometryInLayerCrsGeometryEngine->intersects( nodeMapGeometry.constGet() ) )
     return nodes;
 
-  nodes.append( n );
+  if ( pc->nodePointCount( n ) > 0 )
+    nodes.append( n );
 
   double childrenErrorPixels = nodeErrorPixels / 2.0;
   if ( childrenErrorPixels < maxErrorPixels )
@@ -648,7 +653,7 @@ int QgsPointCloudLayerProfileGenerator::visitNodesAsync( const QVector<IndexedPo
       if ( blockRequests.isEmpty() )
         loop.exit();
 
-      std::unique_ptr<QgsPointCloudBlock> block( blockRequest->block() );
+      std::unique_ptr<QgsPointCloudBlock> block = blockRequest->takeBlock();
 
       blockRequest->deleteLater();
 
@@ -675,7 +680,8 @@ int QgsPointCloudLayerProfileGenerator::visitNodesAsync( const QVector<IndexedPo
   // was called for all blocks, so let's clean up anything that is left
   for ( QgsPointCloudBlockRequest *blockRequest : std::as_const( blockRequests ) )
   {
-    delete blockRequest->block();
+    std::unique_ptr<QgsPointCloudBlock> block = blockRequest->takeBlock();
+    block.reset();
     blockRequest->deleteLater();
   }
 

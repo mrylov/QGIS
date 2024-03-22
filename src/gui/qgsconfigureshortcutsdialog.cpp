@@ -31,7 +31,7 @@
 #include <QTextStream>
 #include <QMenu>
 #include <QAction>
-#include <QPrinter>
+#include <QPdfWriter>
 #include <QTextDocument>
 #include <QTextCursor>
 #include <QTextTable>
@@ -137,6 +137,9 @@ void QgsConfigureShortcutsDialog::saveShortcuts( bool saveAll )
 {
   QString fileName = QFileDialog::getSaveFileName( this, tr( "Save Shortcuts" ), QDir::homePath(),
                      tr( "XML file" ) + " (*.xml);;" + tr( "All files" ) + " (*)" );
+  // return dialog focus on Mac
+  activateWindow();
+  raise();
 
   if ( fileName.isEmpty() )
     return;
@@ -558,13 +561,16 @@ void QgsConfigureShortcutsDialog::mLeFilter_textChanged( const QString &text )
 
 void QgsConfigureShortcutsDialog::showHelp()
 {
-  QgsHelp::openHelp( QStringLiteral( "introduction/qgis_configuration.html#keyboard-shortcuts" ) );
+  QgsHelp::openHelp( QStringLiteral( "introduction/qgis_configuration.html#shortcuts" ) );
 }
 
 void QgsConfigureShortcutsDialog::saveShortcutsPdf()
 {
   QString fileName = QFileDialog::getSaveFileName( this, tr( "Save Shortcuts" ), QDir::homePath(),
                      tr( "PDF file" ) + " (*.pdf);;" + tr( "All files" ) + " (*)" );
+  // return dialog focus on Mac
+  activateWindow();
+  raise();
 
   if ( fileName.isEmpty() )
     return;
@@ -665,11 +671,8 @@ void QgsConfigureShortcutsDialog::saveShortcutsPdf()
     table->cellAt( row, 2 ).firstCursorPosition().insertText( sequence );
   }
 
-  QPrinter printer( QPrinter::ScreenResolution );
-  printer.setOutputFormat( QPrinter::PdfFormat );
-  printer.setPageLayout( QPageLayout( QPageSize( QPageSize::A4 ), QPageLayout::Portrait, QMarginsF( 20, 10, 10, 10 ) ) );
-  printer.setOutputFileName( fileName );
-  document->setPageSize( QSizeF( printer.pageRect( QPrinter::DevicePixel ).size() ) );
-
-  document->print( &printer );
+  QPdfWriter pdfWriter( fileName );
+  pdfWriter.setPageLayout( QPageLayout( QPageSize( QPageSize::A4 ), QPageLayout::Portrait, QMarginsF( 20, 10, 10, 10 ) ) );
+  document->setPageSize( QSizeF( pdfWriter.pageLayout().fullRect( QPageLayout::Point ).size() ) );
+  document->print( &pdfWriter );
 }

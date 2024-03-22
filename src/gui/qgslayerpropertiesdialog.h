@@ -42,6 +42,21 @@ class GUI_EXPORT QgsLayerPropertiesDialog : public QgsOptionsDialogBase SIP_ABST
 
   public:
 
+#ifndef SIP_RUN
+
+    /**
+     * Style storage type.
+     */
+    enum StyleType
+    {
+      QML,
+      SLD,
+      DatasourceDatabase,
+      UserDatabase,
+    };
+    Q_ENUM( StyleType )
+#endif
+
     /**
      * Constructor for QgsLayerPropertiesDialog.
      *
@@ -57,7 +72,7 @@ class GUI_EXPORT QgsLayerPropertiesDialog : public QgsOptionsDialogBase SIP_ABST
     /**
      * Sets the metadata \a widget and \a page associated with the dialog.
      *
-     * This must be called in order for the standard metadata loading/saving functionality to be avialable.
+     * This must be called in order for the standard metadata loading/saving functionality to be available.
      */
     void setMetadataWidget( QgsMetadataWidget *widget, QWidget *page );
 
@@ -65,6 +80,27 @@ class GUI_EXPORT QgsLayerPropertiesDialog : public QgsOptionsDialogBase SIP_ABST
      * Adds properties page from a \a factory.
      */
     virtual void addPropertiesPageFactory( const QgsMapLayerConfigWidgetFactory *factory );
+
+    /**
+     * Saves the default style when appropriate button is pressed
+     *
+     * \since QGIS 3.30
+     */
+    void saveDefaultStyle();
+
+    /**
+     * Triggers a dialog to load a saved style
+     *
+     * \since QGIS 3.30
+     */
+    void loadStyle();
+
+    /**
+     * Saves a style when appriate button is pressed
+     *
+     * \since QGIS 3.30
+     */
+    void saveStyleAs();
 
   public slots:
 

@@ -86,8 +86,21 @@ class CORE_EXPORT QgsRenderChecker
      *
      * If \a ignoreSuccess is TRUE then the report will always be empty if
      * the test was successful.
+     *
+     * \see markdownReport()
      */
     QString report( bool ignoreSuccess = true ) const;
+
+    /**
+     * Returns the markdown report describing the results of the test run.
+     *
+     * If \a ignoreSuccess is TRUE then the report will always be empty if
+     * the test was successful.
+     *
+     * \see report()
+     * \since QGIS 3.34
+     */
+    QString markdownReport( bool ignoreSuccess = true ) const;
 
     /**
      * Returns the percent of pixels which matched the control image.
@@ -161,7 +174,6 @@ class CORE_EXPORT QgsRenderChecker
      */
     QString renderedImage() const { return mRenderedImageFile; }
 
-    //! \since QGIS 2.4
     void setMapSettings( const QgsMapSettings &mapSettings );
 
     /**
@@ -169,7 +181,6 @@ class CORE_EXPORT QgsRenderChecker
      * Default value is 0.
      * \param colorTolerance is maximum difference for each color component
      * including alpha to be considered correct.
-     * \since QGIS 2.1
      */
     void setColorTolerance( unsigned int colorTolerance ) { mColorTolerance = colorTolerance; }
 
@@ -177,7 +188,6 @@ class CORE_EXPORT QgsRenderChecker
      * Sets the largest allowable difference in size between the rendered and the expected image.
      * \param xTolerance x tolerance in pixels
      * \param yTolerance y tolerance in pixels
-     * \since QGIS 2.12
      */
     void setSizeTolerance( int xTolerance, int yTolerance ) { mMaxSizeDifferenceX = xTolerance; mMaxSizeDifferenceY = yTolerance; }
 
@@ -186,7 +196,7 @@ class CORE_EXPORT QgsRenderChecker
      *
      * \since QGIS 3.28
      */
-    enum class Flag : int
+    enum class Flag : int SIP_ENUM_BASETYPE( IntFlag )
     {
       AvoidExportingRenderedImage = 1 << 0, //!< Avoids exporting rendered images to reports
     };
@@ -276,8 +286,18 @@ class CORE_EXPORT QgsRenderChecker
      */
     QVector<QgsDartMeasurement> dartMeasurements() const { return mDashMessages; }
 
+    /**
+     * Returns the path to the QGIS source code.
+     *
+     * \since QGIS 3.36
+     */
+    static QString sourcePath();
+
   protected:
+    //! HTML format report
     QString mReport;
+    //! Markdown report
+    QString mMarkdownReport;
     unsigned int mMatchTarget = 0;
     int mElapsedTime = 0;
     QString mRenderedImageFile;

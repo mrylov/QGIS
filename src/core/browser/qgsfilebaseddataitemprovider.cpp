@@ -162,8 +162,8 @@ Qgis::BrowserLayerType QgsProviderSublayerItem::layerTypeFromSublayer( const Qgs
     case Qgis::LayerType::PointCloud:
       return Qgis::BrowserLayerType::PointCloud;
 
-    case Qgis::LayerType::TiledMesh:
-      return Qgis::BrowserLayerType::TiledMesh;
+    case Qgis::LayerType::TiledScene:
+      return Qgis::BrowserLayerType::TiledScene;
 
     case Qgis::LayerType::Annotation:
     case Qgis::LayerType::Group:
@@ -506,6 +506,11 @@ Qgis::DatabaseProviderConnectionCapabilities2 QgsFileDataCollectionItem::databas
   return mCachedCapabilities2;
 }
 
+QList<QgsProviderSublayerDetails> QgsFileDataCollectionItem::sublayers() const
+{
+  return mSublayers;
+}
+
 //
 // QgsFileBasedDataItemProvider
 //
@@ -515,9 +520,9 @@ QString QgsFileBasedDataItemProvider::name()
   return QStringLiteral( "files" );
 }
 
-int QgsFileBasedDataItemProvider::capabilities() const
+Qgis::DataItemProviderCapabilities QgsFileBasedDataItemProvider::capabilities() const
 {
-  return QgsDataProvider::File | QgsDataProvider::Dir;
+  return Qgis::DataItemProviderCapability::Files | Qgis::DataItemProviderCapability::Directories;
 }
 
 QgsDataItem *QgsFileBasedDataItemProvider::createDataItem( const QString &path, QgsDataItem *parentItem )

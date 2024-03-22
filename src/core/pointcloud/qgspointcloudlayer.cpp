@@ -72,7 +72,9 @@ QgsPointCloudLayer::~QgsPointCloudLayer()
 {
   if ( QgsTask *task = QgsApplication::taskManager()->task( mStatsCalculationTask ) )
   {
+    mStatsCalculationTask = 0;
     task->cancel();
+    task->waitForFinished();
   }
 }
 
@@ -427,7 +429,7 @@ void QgsPointCloudLayer::setDataSourcePrivate( const QString &dataSource, const 
   setCrs( mDataProvider->crs() );
   if ( !( flags & QgsDataProvider::SkipGetExtent ) )
   {
-    setExtent( mDataProvider->extent() );
+    setExtent3D( mDataProvider->extent3D() );
   }
 
   bool loadDefaultStyleFlag = false;
@@ -453,7 +455,7 @@ void QgsPointCloudLayer::setDataSourcePrivate( const QString &dataSource, const 
     calculateStatistics();
   }
 
-  // Note: we load the statistics from the data provider regardless of it being an existing metadata (do not check fot hasStatisticsMetadata)
+  // Note: we load the statistics from the data provider regardless of it being an existing metadata (do not check for hasStatisticsMetadata)
   // since the X, Y & Z coordinates will be in the header of the dataset
   if ( mDataProvider && mDataProvider->isValid() && mStatistics.sampledPointsCount() == 0 && mDataProvider->indexingState() == QgsPointCloudDataProvider::Indexed )
   {
@@ -576,6 +578,12 @@ QString QgsPointCloudLayer::htmlMetadata() const
                 + tr( "Point count" ) + QStringLiteral( "</td><td>" )
                 + ( pointCount < 0 ? tr( "unknown" ) : locale.toString( static_cast<qlonglong>( pointCount ) ) )
                 + QStringLiteral( "</td></tr>\n" );
+
+  if ( const QgsPointCloudDataProvider *provider = dataProvider() )
+  {
+    myMetadata += provider->htmlMetadata();
+  }
+
   myMetadata += QLatin1String( "</table>\n<br><br>" );
 
   // CRS
@@ -897,19 +905,19 @@ void QgsPointCloudLayer::calculateStatistics()
     for ( const QString &attribute : coordinateAttributes )
     {
       QgsPointCloudAttributeStatistics s;
-      QVariant min = index->metadataStatistic( attribute, QgsStatisticalSummary::Min );
-      QVariant max = index->metadataStatistic( attribute, QgsStatisticalSummary::Max );
+      QVariant min = index->metadataStatistic( attribute, Qgis::Statistic::Min );
+      QVariant max = index->metadataStatistic( attribute, Qgis::Statistic::Max );
       if ( !min.isValid() )
         continue;
       s.minimum = min.toDouble();
       s.maximum = max.toDouble();
-      s.count = index->metadataStatistic( attribute, QgsStatisticalSummary::Count ).toInt();
-      s.mean = index->metadataStatistic( attribute, QgsStatisticalSummary::Mean ).toInt();
-      s.stDev = index->metadataStatistic( attribute, QgsStatisticalSummary::StDev ).toInt();
+      s.count = index->metadataStatistic( attribute, Qgis::Statistic::Count ).toInt();
+      s.mean = index->metadataStatistic( attribute, Qgis::Statistic::Mean ).toInt();
+      s.stDev = index->metadataStatistic( attribute, Qgis::Statistic::StDev ).toInt();
       QVariantList classes = index->metadataClasses( attribute );
       for ( const QVariant &c : classes )
       {
-        s.classCount[ c.toInt() ] = index->metadataClassStatistic( attribute, c, QgsStatisticalSummary::Count ).toInt();
+        s.classCount[ c.toInt() ] = index->metadataClassStatistic( attribute, c, Qgis::Statistic::Count ).toInt();
       }
       statsMap[ attribute ] = s;
     }
@@ -934,8 +942,11 @@ void QgsPointCloudLayer::calculateStatistics()
   // In case the statistics calculation fails, QgsTask::taskTerminated will be called
   connect( task, &QgsTask::taskTerminated, this, [this]()
   {
-    QgsMessageLog::logMessage( QObject::tr( "Failed to calculate statistics of the point cloud %1" ).arg( this->name() ) );
-    mStatsCalculationTask = 0;
+    if ( mStatsCalculationTask )
+    {
+      QgsMessageLog::logMessage( QObject::tr( "Failed to calculate statistics of the point cloud %1" ).arg( this->name() ) );
+      mStatsCalculationTask = 0;
+    }
   } );
 
   mStatsCalculationTask = QgsApplication::taskManager()->addTask( task );

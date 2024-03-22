@@ -91,7 +91,7 @@ QList<QgsMapToolIdentify::IdentifyResult> QgsIdentifyMenu::findFeaturesOnCanvas(
 
         QgsFeatureIterator fit = vectorLayer->getFeatures( QgsFeatureRequest()
                                  .setFilterRect( rect )
-                                 .setFlags( QgsFeatureRequest::ExactIntersect ) );
+                                 .setFlags( Qgis::FeatureRequestFlag::ExactIntersect ) );
         QgsFeature f;
         while ( fit.nextFeature( f ) )
         {
@@ -192,7 +192,7 @@ QList<QgsMapToolIdentify::IdentifyResult> QgsIdentifyMenu::exec( const QList<Qgs
       case Qgis::LayerType::Mesh:
       case Qgis::LayerType::PointCloud:
       case Qgis::LayerType::Group:
-      case Qgis::LayerType::TiledMesh:
+      case Qgis::LayerType::TiledScene:
         break;
     }
   }

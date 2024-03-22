@@ -38,7 +38,6 @@
 #include "qgsrasterlayer.h"
 #include "qgsvectorlayer.h"
 #include "qgsproject.h"
-#include "qgssettings.h"
 #include "qgsmeshlayer.h"
 #include "qgsgui.h"
 #include "qgsnative.h"
@@ -53,7 +52,7 @@
 #include "qgspointcloudlayer.h"
 #include "qgslayeritem.h"
 #include "qgsdirectoryitem.h"
-#include "qgstiledmeshlayer.h"
+#include "qgstiledscenelayer.h"
 
 /// @cond PRIVATE
 
@@ -233,12 +232,12 @@ void QgsBrowserLayerProperties::setItem( QgsDataItem *item )
       break;
     }
 
-    case Qgis::LayerType::TiledMesh:
+    case Qgis::LayerType::TiledScene:
     {
-      QgsDebugMsgLevel( QStringLiteral( "creating tiled mesh layer" ), 2 );
-      QgsTiledMeshLayer::LayerOptions options { QgsProject::instance()->transformContext() };
+      QgsDebugMsgLevel( QStringLiteral( "creating tiled scene layer" ), 2 );
+      QgsTiledSceneLayer::LayerOptions options { QgsProject::instance()->transformContext() };
       options.skipCrsValidation = true;
-      mLayer = std::make_unique< QgsTiledMeshLayer >( layerItem->uri(), layerItem->name(), layerItem->providerKey(), options );
+      mLayer = std::make_unique< QgsTiledSceneLayer >( layerItem->uri(), layerItem->name(), layerItem->providerKey(), options );
       break;
     }
 
@@ -309,7 +308,7 @@ void QgsBrowserLayerProperties::loadAttributeTable()
   layerCache->setCacheGeometry( false );
   QgsAttributeTableModel *tableModel = new QgsAttributeTableModel( layerCache, this );
   mAttributeTableFilterModel = new QgsAttributeTableFilterModel( nullptr, tableModel, this );
-  tableModel->setRequest( QgsFeatureRequest().setFlags( QgsFeatureRequest::NoGeometry ).setLimit( 100 ) );
+  tableModel->setRequest( QgsFeatureRequest().setFlags( Qgis::FeatureRequestFlag::NoGeometry ).setLimit( 100 ) );
   layerCache->setParent( tableModel );
   tableModel->setParent( mAttributeTableFilterModel );
 

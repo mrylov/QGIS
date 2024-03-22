@@ -29,10 +29,10 @@
 #include "qgspointcloudproviderguimetadata.h"
 #include "qgsmaplayerconfigwidgetfactory.h"
 
-#include "qgstiledmeshproviderguimetadata.h"
+#include "qgstiledsceneproviderguimetadata.h"
 #include "qgsmbtilesvectortileguiprovider.h"
 #include "qgsvtpkvectortileguiprovider.h"
-
+#include "qgssensorthingsguiprovider.h"
 #ifdef HAVE_EPT
 #include "qgseptproviderguimetadata.h"
 #endif
@@ -118,8 +118,11 @@ void QgsProviderGuiRegistry::loadStaticProviders( )
     mProviders[ pointcloud->key() ] = pointcloud;
   }
 
-  QgsProviderGuiMetadata *tiledMesh = new QgsTiledMeshProviderGuiMetadata();
-  mProviders[ tiledMesh->key() ] = tiledMesh;
+  QgsProviderGuiMetadata *tiledScene = new QgsTiledSceneProviderGuiMetadata();
+  mProviders[ tiledScene->key() ] = tiledScene;
+
+  QgsProviderGuiMetadata *sensorThings = new QgsSensorThingsProviderGuiMetadata();
+  mProviders[ sensorThings->key() ] = sensorThings;
 
 #ifdef HAVE_STATIC_PROVIDERS
   QgsProviderGuiMetadata *wms = new QgsWmsProviderGuiMetadata();

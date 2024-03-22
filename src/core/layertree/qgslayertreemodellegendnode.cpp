@@ -339,7 +339,7 @@ QgsSymbolLegendNode::QgsSymbolLegendNode( QgsLayerTreeLayer *nodeLayer, const Qg
   if ( QgsVectorLayer *vl = qobject_cast<QgsVectorLayer *>( nodeLayer->layer() ) )
     connect( vl, &QgsVectorLayer::symbolFeatureCountMapChanged, this, &QgsSymbolLegendNode::updateLabel );
 
-  connect( nodeLayer, &QObject::destroyed, this, [ = ]() { mLayerNode = nullptr; } );
+  connect( nodeLayer, &QObject::destroyed, this, [this]() { mLayerNode = nullptr; } );
 
   if ( const QgsSymbol *symbol = mItem.symbol() )
   {
@@ -605,15 +605,15 @@ QVariant QgsSymbolLegendNode::data( int role ) const
       return vlayer->renderer()->legendSymbolItemChecked( mItem.ruleKey() ) ? Qt::Checked : Qt::Unchecked;
     }
   }
-  else if ( role == RuleKeyRole )
+  else if ( role == static_cast< int >( QgsLayerTreeModelLegendNode::CustomRole::RuleKey ) )
   {
     return mItem.ruleKey();
   }
-  else if ( role == ParentRuleKeyRole )
+  else if ( role == static_cast< int >( QgsLayerTreeModelLegendNode::CustomRole::ParentRuleKey ) )
   {
     return mItem.parentRuleKey();
   }
-  else if ( role == QgsLayerTreeModelLegendNode::NodeTypeRole )
+  else if ( role == static_cast< int >( QgsLayerTreeModelLegendNode::CustomRole::NodeType ) )
   {
     return QgsLayerTreeModelLegendNode::SymbolLegend;
   }
@@ -634,6 +634,9 @@ bool QgsSymbolLegendNode::setData( const QVariant &value, int role )
     return false;
 
   vlayer->renderer()->checkLegendSymbolItem( mItem.ruleKey(), value == Qt::Checked );
+
+  if ( QgsProject *project = vlayer->project() )
+    project->setDirty( true );
 
   emit dataChanged();
   vlayer->emitStyleChanged();
@@ -812,10 +815,21 @@ QSizeF QgsSymbolLegendNode::drawSymbol( const QgsLegendSettings &settings, ItemC
 
 QJsonObject QgsSymbolLegendNode::exportSymbolToJson( const QgsLegendSettings &settings, const QgsRenderContext &context ) const
 {
+  QJsonObject json;
+  if ( mItem.scaleMaxDenom() > 0 )
+  {
+    json[ QStringLiteral( "scaleMaxDenom" ) ] = mItem.scaleMaxDenom();
+  }
+  if ( mItem.scaleMinDenom() > 0 )
+  {
+    json[ QStringLiteral( "scaleMinDenom" ) ] = mItem.scaleMinDenom();
+  }
+  mItem.scaleMaxDenom();
+
   const QgsSymbol *s = mCustomSymbol ? mCustomSymbol.get() : mItem.symbol();
   if ( !s )
   {
-    return QJsonObject();
+    return json;
   }
 
 
@@ -857,17 +871,7 @@ QJsonObject QgsSymbolLegendNode::exportSymbolToJson( const QgsLegendSettings &se
   img.save( &buffer, "PNG" );
   const QString base64 = QString::fromLatin1( byteArray.toBase64().data() );
 
-  QJsonObject json;
   json[ QStringLiteral( "icon" ) ] = base64;
-  if ( mItem.scaleMaxDenom() > 0 )
-  {
-    json[ QStringLiteral( "scaleMaxDenom" ) ] = mItem.scaleMaxDenom();
-  }
-  if ( mItem.scaleMinDenom() > 0 )
-  {
-    json[ QStringLiteral( "scaleMinDenom" ) ] = mItem.scaleMinDenom();
-  }
-  mItem.scaleMaxDenom();
   return json;
 }
 
@@ -904,7 +908,10 @@ void QgsSymbolLegendNode::updateLabel()
 
   const bool showFeatureCount = mLayerNode->customProperty( QStringLiteral( "showFeatureCount" ), 0 ).toBool();
   QgsVectorLayer *vl = qobject_cast<QgsVectorLayer *>( mLayerNode->layer() );
-  mLabel = symbolLabel();
+  if ( !mLayerNode->labelExpression().isEmpty() )
+    mLabel = "[%" + mLayerNode->labelExpression() + "%]";
+  else
+    mLabel = symbolLabel();
 
   if ( showFeatureCount && vl )
   {
@@ -936,13 +943,11 @@ QString QgsSymbolLegendNode::evaluateLabel( const QgsExpressionContext &context,
 
     if ( label.isEmpty() )
     {
+      const QString symLabel = symbolLabel();
       if ( ! mLayerNode->labelExpression().isEmpty() )
         mLabel = QgsExpression::replaceExpressionText( "[%" + mLayerNode->labelExpression() + "%]", &contextCopy );
-      else if ( mLabel.contains( "[%" ) )
-      {
-        const QString symLabel = symbolLabel();
+      else if ( symLabel.contains( "[%" ) )
         mLabel = QgsExpression::replaceExpressionText( symLabel, &contextCopy );
-      }
       return mLabel;
     }
     else
@@ -989,9 +994,9 @@ QVariant QgsSimpleLegendNode::data( int role ) const
     return mUserLabel.isEmpty() ? mLabel : mUserLabel;
   else if ( role == Qt::DecorationRole )
     return mIcon;
-  else if ( role == RuleKeyRole && !mKey.isEmpty() )
+  else if ( role == static_cast< int >( QgsLayerTreeModelLegendNode::CustomRole::RuleKey ) && !mKey.isEmpty() )
     return mKey;
-  else if ( role == QgsLayerTreeModelLegendNode::NodeTypeRole )
+  else if ( role == static_cast< int >( QgsLayerTreeModelLegendNode::CustomRole::NodeType ) )
     return QgsLayerTreeModelLegendNode::SimpleLegend;
   else
     return QVariant();
@@ -1016,7 +1021,7 @@ QVariant QgsImageLegendNode::data( int role ) const
   {
     return mImage.size();
   }
-  else if ( role == QgsLayerTreeModelLegendNode::NodeTypeRole )
+  else if ( role == static_cast< int >( QgsLayerTreeModelLegendNode::CustomRole::NodeType ) )
   {
     return QgsLayerTreeModelLegendNode::ImageLegend;
   }
@@ -1097,10 +1102,10 @@ QVariant QgsRasterSymbolLegendNode::data( int role ) const
     case Qt::EditRole:
       return mUserLabel.isEmpty() ? mLabel : mUserLabel;
 
-    case QgsLayerTreeModelLegendNode::NodeTypeRole:
+    case static_cast< int >( QgsLayerTreeModelLegendNode::CustomRole::NodeType ):
       return QgsLayerTreeModelLegendNode::RasterSymbolLegend;
 
-    case QgsLayerTreeModelLegendNode::RuleKeyRole:
+    case static_cast< int >( QgsLayerTreeModelLegendNode::CustomRole::RuleKey ):
       return mRuleKey;
 
     case Qt::CheckStateRole:
@@ -1143,6 +1148,9 @@ bool QgsRasterSymbolLegendNode::setData( const QVariant &value, int role )
     pclayer->emitStyleChanged();
 
     pclayer->triggerRepaint();
+    if ( pclayer->sync3DRendererTo2DRenderer() )
+      pclayer->convertRenderer3DFromRenderer2D();
+
     return true;
   }
   else
@@ -1261,7 +1269,7 @@ QgsWmsLegendNode::QgsWmsLegendNode( QgsLayerTreeLayer *nodeLayer, QObject *paren
 
 QgsWmsLegendNode::~QgsWmsLegendNode() = default;
 
-QImage QgsWmsLegendNode::getLegendGraphic() const
+QImage QgsWmsLegendNode::getLegendGraphic( bool synchronous ) const
 {
   if ( ! mValid && ! mFetcher )
   {
@@ -1289,6 +1297,13 @@ QImage QgsWmsLegendNode::getLegendGraphic() const
         connect( mFetcher.get(), &QgsImageFetcher::error, this, &QgsWmsLegendNode::getLegendGraphicErrored );
         connect( mFetcher.get(), &QgsImageFetcher::progress, this, &QgsWmsLegendNode::getLegendGraphicProgress );
         mFetcher->start();
+        if ( synchronous )
+        {
+          QEventLoop loop;
+          // The slots getLegendGraphicFinished and getLegendGraphicErrored will destroy the fetcher
+          connect( mFetcher.get(), &QObject::destroyed, &loop, &QEventLoop::quit );
+          loop.exec();
+        }
       }
     }
     else
@@ -1310,7 +1325,7 @@ QVariant QgsWmsLegendNode::data( int role ) const
   {
     return getLegendGraphic().size();
   }
-  else if ( role == QgsLayerTreeModelLegendNode::NodeTypeRole )
+  else if ( role == static_cast< int >( QgsLayerTreeModelLegendNode::CustomRole::NodeType ) )
   {
     return QgsLayerTreeModelLegendNode::WmsLegend;
   }
@@ -1321,7 +1336,7 @@ QSizeF QgsWmsLegendNode::drawSymbol( const QgsLegendSettings &settings, ItemCont
 {
   Q_UNUSED( itemHeight )
 
-  const QImage image = getLegendGraphic();
+  const QImage image = getLegendGraphic( settings.synchronousLegendRequests() );
 
   double px2mm = 1000. / image.dotsPerMeterX();
   double mmWidth = image.width() * px2mm;
@@ -1471,7 +1486,7 @@ QVariant QgsDataDefinedSizeLegendNode::data( int role ) const
     cacheImage();
     return mImage.size();
   }
-  else if ( role == QgsLayerTreeModelLegendNode::NodeTypeRole )
+  else if ( role == static_cast< int >( QgsLayerTreeModelLegendNode::CustomRole::NodeType ) )
   {
     return QgsLayerTreeModelLegendNode::DataDefinedSizeLegend;
   }

@@ -58,6 +58,7 @@ ms-windows/osgeo4w/untgz/
 ms-windows/packages/
 ms-windows/progs/
 ms-windows/untgz/
+python/plugins/grassprovider/description/algorithms.json
 python/plugins/grassprovider/tests/testdata/directions.tif.aux.xml
 python/plugins/processing/tests/testdata/*.aux.xml
 python/plugins/processing/tests/testdata/custom/*.aux.xml
@@ -75,6 +76,7 @@ scripts/RelWithDebInfo
 scripts/astyle.exe
 scripts/qgisstyle*
 src/core/qgsexpression_texts.cpp
+tags
 tests/testdata/*.aux.xml
 tests/testdata/cache/
 tests/testdata/checker360by180.asc.aux.xml

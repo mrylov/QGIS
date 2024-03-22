@@ -28,7 +28,8 @@ from qgis.core import (
     QgsProviderRegistry,
     QgsSettings,
 )
-from qgis.testing import start_app, unittest
+import unittest
+from qgis.testing import start_app, QgisTestCase
 
 from utilities import unitTestDataPath
 
@@ -70,7 +71,7 @@ host       all           all             ::1/32                 trust
 TEST_CONNECTION_NAME = 'test_connection'
 
 
-class TestPyQgsDBManagerPostgis(unittest.TestCase):
+class TestPyQgsDBManagerPostgis(QgisTestCase):
 
     @classmethod
     def setUpAuth(cls):
@@ -168,7 +169,7 @@ class TestPyQgsDBManagerPostgis(unittest.TestCase):
         if 'QGIS_PGTEST_DB' in os.environ:
             cls.dbconn = os.environ['QGIS_PGTEST_DB']
         uri = QgsDataSourceUri()
-        uri.setConnection("localhost", cls.port, cls.dbname, "", "", QgsDataSourceUri.SslVerifyFull, authId)
+        uri.setConnection("localhost", cls.port, cls.dbname, "", "", QgsDataSourceUri.SslMode.SslVerifyFull, authId)
         uri.setKeyColumn('pk')
         uri.setSrid('EPSG:4326')
         uri.setDataSource('qgis_test', 'someData', "geom", "", "pk")
@@ -270,7 +271,7 @@ class TestPyQgsDBManagerPostgis(unittest.TestCase):
             pkies = glob.glob(os.path.join(tempfile.gettempdir(), 'tmp*_{*}.pem'))
             for fn in pkies:
                 f = QFile(fn)
-                f.setPermissions(QFile.WriteOwner)
+                f.setPermissions(QFile.Permission.WriteOwner)
                 f.remove()
 
         # remove any temppki in temporary path to check that no

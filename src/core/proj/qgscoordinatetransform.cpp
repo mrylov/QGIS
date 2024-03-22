@@ -611,12 +611,12 @@ QgsRectangle QgsCoordinateTransform::transformBoundingBox( const QgsRectangle &r
   // even with 1000 points it takes < 1ms.
   // TODO: how to effectively and precisely reproject bounding box?
   const int nPoints = 1000;
-  const double d = std::sqrt( ( rect.width() * ( yMax - yMin ) ) / std::pow( std::sqrt( static_cast< double >( nPoints ) ) - 1, 2.0 ) );
-  const int nXPoints = std::min( static_cast< int >( std::ceil( rect.width() / d ) ) + 1, 1000 );
-  const int nYPoints = std::min( static_cast< int >( std::ceil( ( yMax - yMin ) / d ) ) + 1, 1000 );
+  const double dst = std::sqrt( ( rect.width() * ( yMax - yMin ) ) / std::pow( std::sqrt( static_cast< double >( nPoints ) ) - 1, 2.0 ) );
+  const int nXPoints = std::min( static_cast< int >( std::ceil( rect.width() / dst ) ) + 1, 1000 );
+  const int nYPoints = std::min( static_cast< int >( std::ceil( ( yMax - yMin ) / dst ) ) + 1, 1000 );
 
   QgsRectangle bb_rect;
-  bb_rect.setMinimal();
+  bb_rect.setNull();
 
   // We're interfacing with C-style vectors in the
   // end, so let's do C-style vectors here too.
@@ -664,8 +664,22 @@ QgsRectangle QgsCoordinateTransform::transformBoundingBox( const QgsRectangle &r
     throw;
   }
 
-  // Calculate the bounding box and use that for the extent
+  // check if result bbox is geographic and is crossing 180/-180 line: ie. min X is before the 180° and max X is after the -180°
+  bool doHandle180Crossover = false;
+  if ( nXPoints > 0 )
+  {
+    const double xMin = std::fmod( x[0], 180.0 );
+    const double xMax = std::fmod( x[nXPoints - 1], 180.0 );
+    if ( handle180Crossover
+         && ( ( direction == Qgis::TransformDirection::Forward && d->mDestCRS.isGeographic() ) ||
+              ( direction == Qgis::TransformDirection::Reverse && d->mSourceCRS.isGeographic() ) )
+         && xMin > 0.0 && xMin <= 180.0 && xMax < 0.0 && xMax >= -180.0 )
+    {
+      doHandle180Crossover = true;
+    }
+  }
 
+  // Calculate the bounding box and use that for the extent
   for ( int i = 0; i < nXPoints * nYPoints; i++ )
   {
     if ( !std::isfinite( x[i] ) || !std::isfinite( y[i] ) )
@@ -673,7 +687,7 @@ QgsRectangle QgsCoordinateTransform::transformBoundingBox( const QgsRectangle &r
       continue;
     }
 
-    if ( handle180Crossover )
+    if ( doHandle180Crossover )
     {
       //if crossing the date line, temporarily add 360 degrees to -ve longitudes
       bb_rect.combineExtentWith( x[i] >= 0.0 ? x[i] : x[i] + 360.0, y[i] );
@@ -690,7 +704,7 @@ QgsRectangle QgsCoordinateTransform::transformBoundingBox( const QgsRectangle &r
     throw QgsCsException( QObject::tr( "Could not transform bounding box to target CRS" ) );
   }
 
-  if ( handle180Crossover )
+  if ( doHandle180Crossover )
   {
     //subtract temporary addition of 360 degrees from longitudes
     if ( bb_rect.xMinimum() > 180.0 )
@@ -773,7 +787,7 @@ void QgsCoordinateTransform::transformCoords( int numPoints, double *x, double *
                       y, sizeof( double ), numPoints,
                       z, sizeof( double ), numPoints,
                       useTime ? t.data() : nullptr, sizeof( double ), useTime ? numPoints : 0 );
-  // Try to - approximatively - emulate the behavior of pj_transform()...
+  // Try to - approximately - emulate the behavior of pj_transform()...
   // In the case of a single point transform, and a transformation error occurs,
   // pj_transform() would return the errno. In cases of multiple point transform,
   // it would continue (for non-transient errors, that is pipeline definition
@@ -818,7 +832,7 @@ void QgsCoordinateTransform::transformCoords( int numPoints, double *x, double *
                           yprev.data(), sizeof( double ), numPoints,
                           zprev.data(), sizeof( double ), numPoints,
                           useTime ? t.data() : nullptr, sizeof( double ), useTime ? numPoints : 0 );
-      // Try to - approximatively - emulate the behavior of pj_transform()...
+      // Try to - approximately - emulate the behavior of pj_transform()...
       // In the case of a single point transform, and a transformation error occurs,
       // pj_transform() would return the errno. In cases of multiple point transform,
       // it would continue (for non-transient errors, that is pipeline definition
@@ -969,9 +983,9 @@ bool QgsCoordinateTransform::setFromCache( const QgsCoordinateReferenceSystem &s
     return false;
 
   const QString sourceKey = src.authid().isEmpty() ?
-                            src.toWkt( QgsCoordinateReferenceSystem::WKT_PREFERRED ) : src.authid();
+                            src.toWkt( Qgis::CrsWktVariant::Preferred ) : src.authid();
   const QString destKey = dest.authid().isEmpty() ?
-                          dest.toWkt( QgsCoordinateReferenceSystem::WKT_PREFERRED ) : dest.authid();
+                          dest.toWkt( Qgis::CrsWktVariant::Preferred ) : dest.authid();
 
   if ( sourceKey.isEmpty() || destKey.isEmpty() )
     return false;
@@ -1014,9 +1028,9 @@ void QgsCoordinateTransform::addToCache()
     return;
 
   const QString sourceKey = d->mSourceCRS.authid().isEmpty() ?
-                            d->mSourceCRS.toWkt( QgsCoordinateReferenceSystem::WKT_PREFERRED ) : d->mSourceCRS.authid();
+                            d->mSourceCRS.toWkt( Qgis::CrsWktVariant::Preferred ) : d->mSourceCRS.authid();
   const QString destKey = d->mDestCRS.authid().isEmpty() ?
-                          d->mDestCRS.toWkt( QgsCoordinateReferenceSystem::WKT_PREFERRED ) : d->mDestCRS.authid();
+                          d->mDestCRS.toWkt( Qgis::CrsWktVariant::Preferred ) : d->mDestCRS.authid();
 
   if ( sourceKey.isEmpty() || destKey.isEmpty() )
     return;

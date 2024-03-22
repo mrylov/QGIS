@@ -105,14 +105,6 @@ QImage QgsVectorTileDataProvider::spriteImage() const
   return QImage();
 }
 
-QString QgsVectorTileDataProvider::htmlMetadata() const
-{
-  QGIS_PROTECT_QOBJECT_THREAD_ACCESS
-
-  return QString();
-}
-
-
 
 
 QgsVectorTileDataProviderSharedData::QgsVectorTileDataProviderSharedData()
@@ -122,7 +114,7 @@ QgsVectorTileDataProviderSharedData::QgsVectorTileDataProviderSharedData()
 
 bool QgsVectorTileDataProviderSharedData::getCachedTileData( QgsVectorTileRawData &data, QgsTileXYZ tile )
 {
-  QgsReadWriteLocker locker( mMutex, QgsReadWriteLocker::Read );
+  QMutexLocker locker( &mMutex );
   if ( QgsVectorTileRawData *cachedData = mTileCache.object( tile ) )
   {
     data = *cachedData;
@@ -134,6 +126,6 @@ bool QgsVectorTileDataProviderSharedData::getCachedTileData( QgsVectorTileRawDat
 
 void QgsVectorTileDataProviderSharedData::storeCachedTileData( const QgsVectorTileRawData &data )
 {
-  QgsReadWriteLocker locker( mMutex, QgsReadWriteLocker::Write );
+  QMutexLocker locker( &mMutex );
   mTileCache.insert( data.id, new QgsVectorTileRawData( data ) );
 }

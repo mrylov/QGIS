@@ -60,7 +60,7 @@ QgsPdalThinByRadiusAlgorithm *QgsPdalThinByRadiusAlgorithm::createInstance() con
 void QgsPdalThinByRadiusAlgorithm::initAlgorithm( const QVariantMap & )
 {
   addParameter( new QgsProcessingParameterPointCloudLayer( QStringLiteral( "INPUT" ), QObject::tr( "Input layer" ) ) );
-  addParameter( new QgsProcessingParameterNumber( QStringLiteral( "SAMPLING_RADIUS" ), QObject::tr( "Sampling radius (in map units)" ), QgsProcessingParameterNumber::Double, 1.0, false, 1e-9 ) );
+  addParameter( new QgsProcessingParameterNumber( QStringLiteral( "SAMPLING_RADIUS" ), QObject::tr( "Sampling radius (in map units)" ), Qgis::ProcessingNumberParameterType::Double, 1.0, false, 1e-9 ) );
   createCommonParameters();
   addParameter( new QgsProcessingParameterPointCloudDestination( QStringLiteral( "OUTPUT" ), QObject::tr( "Thinned (by radius)" ) ) );
 }
@@ -75,6 +75,7 @@ QStringList QgsPdalThinByRadiusAlgorithm::createArgumentLists( const QVariantMap
 
   const QString outputName = parameterAsOutputLayer( parameters, QStringLiteral( "OUTPUT" ), context );
   QString outputFile = fixOutputFileName( layer->source(), outputName, context );
+  checkOutputFormat( layer->source(), outputFile );
   setOutputValue( QStringLiteral( "OUTPUT" ), outputFile );
 
   double step = parameterAsDouble( parameters, QStringLiteral( "SAMPLING_RADIUS" ), context );

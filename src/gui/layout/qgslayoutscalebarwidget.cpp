@@ -57,14 +57,14 @@ QgsLayoutScaleBarWidget::QgsLayoutScaleBarWidget( QgsLayoutItemScaleBar *scaleBa
   connect( mMaxWidthSpinBox, static_cast < void ( QDoubleSpinBox::* )( double ) > ( &QDoubleSpinBox::valueChanged ), this, &QgsLayoutScaleBarWidget::mMaxWidthSpinBox_valueChanged );
   connect( mNumberFormatPushButton, &QPushButton::clicked, this, &QgsLayoutScaleBarWidget::changeNumberFormat );
 
-  registerDataDefinedButton( mSegmentsLeftDDBtn, QgsLayoutObject::ScalebarLeftSegments );
-  registerDataDefinedButton( mSegmentsRightDDBtn, QgsLayoutObject::ScalebarRightSegments );
-  registerDataDefinedButton( mSegmentSizeDDBtn, QgsLayoutObject::ScalebarSegmentWidth );
-  registerDataDefinedButton( mMinWidthDDBtn, QgsLayoutObject::ScalebarMinimumWidth );
-  registerDataDefinedButton( mMaxWidthDDBtn, QgsLayoutObject::ScalebarMaximumWidth );
-  registerDataDefinedButton( mHeightDDBtn, QgsLayoutObject::ScalebarHeight );
-  registerDataDefinedButton( mSubdivisionHeightDDBtn, QgsLayoutObject::ScalebarSubdivisionHeight );
-  registerDataDefinedButton( mRightSegmentSubdivisionsDDBtn, QgsLayoutObject::ScalebarRightSegmentSubdivisions );
+  registerDataDefinedButton( mSegmentsLeftDDBtn, QgsLayoutObject::DataDefinedProperty::ScalebarLeftSegments );
+  registerDataDefinedButton( mSegmentsRightDDBtn, QgsLayoutObject::DataDefinedProperty::ScalebarRightSegments );
+  registerDataDefinedButton( mSegmentSizeDDBtn, QgsLayoutObject::DataDefinedProperty::ScalebarSegmentWidth );
+  registerDataDefinedButton( mMinWidthDDBtn, QgsLayoutObject::DataDefinedProperty::ScalebarMinimumWidth );
+  registerDataDefinedButton( mMaxWidthDDBtn, QgsLayoutObject::DataDefinedProperty::ScalebarMaximumWidth );
+  registerDataDefinedButton( mHeightDDBtn, QgsLayoutObject::DataDefinedProperty::ScalebarHeight );
+  registerDataDefinedButton( mSubdivisionHeightDDBtn, QgsLayoutObject::DataDefinedProperty::ScalebarSubdivisionHeight );
+  registerDataDefinedButton( mRightSegmentSubdivisionsDDBtn, QgsLayoutObject::DataDefinedProperty::ScalebarRightSegmentSubdivisions );
 
   mSegmentsLeftDDBtn->registerEnabledWidget( mSegmentsLeftSpinBox, false );
   mSegmentsRightDDBtn->registerEnabledWidget( mNumberOfSegmentsSpinBox, false );
@@ -330,16 +330,16 @@ void QgsLayoutScaleBarWidget::setGuiElements()
   if ( mScalebar->segmentSizeMode() == QgsScaleBarSettings::SegmentSizeFixed )
   {
     mFixedSizeRadio->setChecked( true );
-    mSegmentSizeSpinBox->setEnabled( true );
-    mMinWidthSpinBox->setEnabled( false );
-    mMaxWidthSpinBox->setEnabled( false );
+    mSegmentSizeWidget->setEnabled( true );
+    mMinWidthWidget->setEnabled( false );
+    mMaxWidthWidget->setEnabled( false );
   }
   else /*if(mComposerScaleBar->segmentSizeMode() == QgsComposerScaleBar::SegmentSizeFitWidth)*/
   {
     mFitWidthRadio->setChecked( true );
-    mSegmentSizeSpinBox->setEnabled( false );
-    mMinWidthSpinBox->setEnabled( true );
-    mMaxWidthSpinBox->setEnabled( true );
+    mSegmentSizeWidget->setEnabled( false );
+    mMinWidthWidget->setEnabled( true );
+    mMaxWidthWidget->setEnabled( true );
   }
   mMinWidthSpinBox->setValue( mScalebar->minimumBarWidth() );
   mMaxWidthSpinBox->setValue( mScalebar->maximumBarWidth() );
@@ -730,9 +730,9 @@ void QgsLayoutScaleBarWidget::disconnectUpdateSignal()
 void QgsLayoutScaleBarWidget::segmentSizeRadioChanged( QAbstractButton *radio )
 {
   const bool fixedSizeMode = radio == mFixedSizeRadio;
-  mMinWidthSpinBox->setEnabled( !fixedSizeMode );
-  mMaxWidthSpinBox->setEnabled( !fixedSizeMode );
-  mSegmentSizeSpinBox->setEnabled( fixedSizeMode );
+  mMinWidthWidget->setEnabled( !fixedSizeMode );
+  mMaxWidthWidget->setEnabled( !fixedSizeMode );
+  mSegmentSizeWidget->setEnabled( fixedSizeMode );
 
   if ( !mScalebar )
   {

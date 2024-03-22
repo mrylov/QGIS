@@ -35,10 +35,7 @@
 #include "qgsmaplayerlistutils_p.h"
 #include "qgsvectorlayerlabeling.h"
 #include "qgsexpressioncontextutils.h"
-#include "qgsrenderer.h"
-#include "qgssymbollayer.h"
 #include "qgsvectorlayerutils.h"
-#include "qgssymbollayerutils.h"
 #include "qgsmaplayertemporalproperties.h"
 #include "qgsmaplayerelevationproperties.h"
 #include "qgsmaplayerstyle.h"
@@ -49,6 +46,9 @@
 #include "qgselevationmap.h"
 #include "qgssettingsentryimpl.h"
 #include "qgssettingstree.h"
+#include "qgsruntimeprofiler.h"
+#include "qgsmeshlayer.h"
+#include "qgsmeshlayerlabeling.h"
 
 const QgsSettingsEntryBool *QgsMapRendererJob::settingsLogCanvasRefreshEvent = new QgsSettingsEntryBool( QStringLiteral( "logCanvasRefreshEvent" ), QgsSettingsTree::sTreeMap, false );
 
@@ -68,7 +68,12 @@ LayerRenderJob &LayerRenderJob::operator=( LayerRenderJob &&other )
   renderer = other.renderer;
   other.renderer = nullptr;
 
+  previewRenderImage = other.previewRenderImage;
+  other.previewRenderImage = nullptr;
+
   imageInitialized = other.imageInitialized;
+  previewRenderImageInitialized = other.previewRenderImageInitialized;
+
   blendMode = other.blendMode;
   opacity = other.opacity;
   cached = other.cached;
@@ -99,6 +104,7 @@ LayerRenderJob &LayerRenderJob::operator=( LayerRenderJob &&other )
 
 LayerRenderJob::LayerRenderJob( LayerRenderJob &&other )
   : imageInitialized( other.imageInitialized )
+  , previewRenderImageInitialized( other.previewRenderImageInitialized )
   , blendMode( other.blendMode )
   , opacity( other.opacity )
   , cached( other.cached )
@@ -117,6 +123,9 @@ LayerRenderJob::LayerRenderJob( LayerRenderJob &&other )
 
   img = other.img;
   other.img = nullptr;
+
+  previewRenderImage = other.previewRenderImage;
+  other.previewRenderImage = nullptr;
 
   renderer = other.renderer;
   other.renderer = nullptr;
@@ -246,6 +255,16 @@ bool QgsMapRendererJob::prepareLabelCache() const
         break;
       }
 
+      case Qgis::LayerType::Mesh:
+      {
+        QgsMeshLayer *l = qobject_cast< QgsMeshLayer *>( ml );
+        if ( l->labelsEnabled() && l->labeling()->requiresAdvancedEffects() )
+        {
+          canCache = false;
+        }
+        break;
+      }
+
       case Qgis::LayerType::VectorTile:
       {
         // TODO -- add detection of advanced labeling effects for vector tile layers
@@ -255,10 +274,9 @@ bool QgsMapRendererJob::prepareLabelCache() const
       case Qgis::LayerType::Raster:
       case Qgis::LayerType::Annotation:
       case Qgis::LayerType::Plugin:
-      case Qgis::LayerType::Mesh:
       case Qgis::LayerType::PointCloud:
       case Qgis::LayerType::Group:
-      case Qgis::LayerType::TiledMesh:
+      case Qgis::LayerType::TiledScene:
         break;
     }
 
@@ -494,7 +512,7 @@ std::vector<LayerRenderJob> QgsMapRendererJob::prepareJobs( QPainter *painter, Q
       continue;
     }
 
-    if ( !mSettings.zRange().isInfinite() && ml->elevationProperties() && !ml->elevationProperties()->isVisibleInZRange( mSettings.zRange() ) )
+    if ( !mSettings.zRange().isInfinite() && ml->elevationProperties() && !ml->elevationProperties()->isVisibleInZRange( mSettings.zRange(), ml ) )
     {
       QgsDebugMsgLevel( QStringLiteral( "Layer not rendered because it is not visible within the map's z range" ), 3 );
       continue;
@@ -629,6 +647,32 @@ std::vector<LayerRenderJob> QgsMapRendererJob::prepareJobs( QPainter *painter, Q
     {
       job.elevationMap = allocateElevationMap( ml->id() );
       job.context()->setElevationMap( job.elevationMap );
+    }
+
+    if ( ( job.renderer->flags() & Qgis::MapLayerRendererFlag::RenderPartialOutputs ) && ( mSettings.flags() & Qgis::MapSettingsFlag::RenderPartialOutput ) )
+    {
+      if ( mCache && ( job.renderer->flags() & Qgis::MapLayerRendererFlag::RenderPartialOutputOverPreviousCachedImage ) && mCache->hasAnyCacheImage( job.layerId + QStringLiteral( "_preview" ) ) )
+      {
+        const QImage cachedImage = mCache->transformedCacheImage( job.layerId + QStringLiteral( "_preview" ), mSettings.mapToPixel() );
+        if ( !cachedImage.isNull() )
+        {
+          job.previewRenderImage = new QImage( cachedImage );
+          job.previewRenderImageInitialized = true;
+          job.context()->setPreviewRenderPainter( new QPainter( job.previewRenderImage ) );
+          job.context()->setPainterFlagsUsingContext( painter );
+        }
+      }
+      if ( !job.previewRenderImage )
+      {
+        job.context()->setPreviewRenderPainter( allocateImageAndPainter( ml->id(), job.previewRenderImage, job.context() ) );
+        job.previewRenderImageInitialized = false;
+      }
+
+      if ( !job.previewRenderImage )
+      {
+        delete job.context()->previewRenderPainter();
+        job.context()->setPreviewRenderPainter( nullptr );
+      }
     }
 
     job.renderingTime = layerTime.elapsed(); // include job preparation time in layer rendering time
@@ -1020,6 +1064,14 @@ void QgsMapRendererJob::cleanupJobs( std::vector<LayerRenderJob> &jobs )
       job.img = nullptr;
     }
 
+    if ( job.previewRenderImage )
+    {
+      delete job.context()->previewRenderPainter();
+      job.context()->setPreviewRenderPainter( nullptr );
+      delete job.previewRenderImage;
+      job.previewRenderImage = nullptr;
+    }
+
     if ( job.elevationMap )
     {
       job.context()->setElevationMap( nullptr );
@@ -1084,6 +1136,14 @@ void QgsMapRendererJob::cleanupSecondPassJobs( std::vector< LayerRenderJob > &jo
 
       delete job.img;
       job.img = nullptr;
+    }
+
+    if ( job.previewRenderImage )
+    {
+      delete job.context()->previewRenderPainter();
+      job.context()->setPreviewRenderPainter( nullptr );
+      delete job.previewRenderImage;
+      job.previewRenderImage = nullptr;
     }
 
     if ( job.picture )
@@ -1234,6 +1294,9 @@ QImage QgsMapRendererJob::layerImageToBeComposed(
 {
   if ( job.imageCanBeComposed() )
   {
+    if ( job.previewRenderImage && !job.completed )
+      return *job.previewRenderImage;
+
     Q_ASSERT( job.img );
     return *job.img;
   }
@@ -1366,6 +1429,12 @@ void QgsMapRendererJob::logRenderingTime( const std::vector< LayerRenderJob > &j
 void QgsMapRendererJob::drawLabeling( QgsRenderContext &renderContext, QgsLabelingEngine *labelingEngine2, QPainter *painter )
 {
   QgsDebugMsgLevel( QStringLiteral( "Draw labeling start" ), 5 );
+
+  std::unique_ptr< QgsScopedRuntimeProfile > labelingProfile;
+  if ( renderContext.flags() & Qgis::RenderContextFlag::RecordProfile )
+  {
+    labelingProfile = std::make_unique< QgsScopedRuntimeProfile >( QObject::tr( "(labeling)" ), QStringLiteral( "rendering" ) );
+  }
 
   QElapsedTimer t;
   t.start();

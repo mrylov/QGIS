@@ -11,9 +11,8 @@ __author__ = 'Julien Cabieces'
 __date__ = '2022-04-19'
 __copyright__ = 'Copyright 2022, The QGIS Project'
 
-import qgis  # NOQA
 
-from PyQt5.QtCore import QDateTime
+from qgis.PyQt.QtCore import QDateTime
 from qgis.core import (
     QgsApplication,
     QgsProject,
@@ -69,7 +68,7 @@ class TestPyQgsProjectStorageBase:
 
         self.assertEqual(prj2.baseName(), "abc")
         self.assertEqual(prj2.absoluteFilePath(), "")  # path not supported for project storages
-        self.assertTrue(abs(prj2.lastModified().secsTo(QDateTime.currentDateTime())) < 10)
+        self.assertLess(abs(prj2.lastModified().secsTo(QDateTime.currentDateTime())), 10)
         lastModified = prj2.lastModified()
 
         # try to see project's metadata
@@ -80,7 +79,7 @@ class TestPyQgsProjectStorageBase:
         time_project = metadata.lastModified
         time_now = QDateTime.currentDateTime()
         time_diff = time_now.secsTo(time_project)
-        self.assertTrue(abs(time_diff) < 10)
+        self.assertLess(abs(time_diff), 10)
 
         # try to update the project
         vl1.setName("testNew")
@@ -101,7 +100,7 @@ class TestPyQgsProjectStorageBase:
 
         self.assertEqual(prj4.baseName(), "abc")
         self.assertEqual(prj4.absoluteFilePath(), "")  # path not supported for project storages
-        self.assertTrue(prj4.lastModified() > lastModified)
+        self.assertGreater(prj4.lastModified(), lastModified)
 
         # try to remove the project
 

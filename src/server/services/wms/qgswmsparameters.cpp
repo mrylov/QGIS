@@ -20,6 +20,8 @@
 #include "qgsmaplayerserverproperties.h"
 #include "qgsmessagelog.h"
 #include "qgswmsserviceexception.h"
+#include "qgsfontutils.h"
+
 #include <QRegularExpression>
 
 const QString EXTERNAL_LAYER_PREFIX = QStringLiteral( "EXTERNAL_WMS:" );
@@ -378,6 +380,11 @@ namespace QgsWms
                                       QVariant( true ) );
     save( pRuleLabel );
 
+    const QgsWmsParameter pShowRuleDetails( QgsWmsParameter::SHOWRULEDETAILS,
+                                            QVariant::Bool,
+                                            QVariant( false ) );
+    save( pShowRuleDetails );
+
     const QgsWmsParameter pScale( QgsWmsParameter::SCALE,
                                   QVariant::Double,
                                   QVariant( -1 ) );
@@ -534,8 +541,7 @@ namespace QgsWms
     save( pWithGeometry );
 
     const QgsWmsParameter pWithMapTip( QgsWmsParameter::WITH_MAPTIP,
-                                       QVariant::Bool,
-                                       QVariant( false ) );
+                                       QVariant::String );
     save( pWithMapTip );
 
     const QgsWmsParameter pWithDisplayName( QgsWmsParameter::WITH_DISPLAY_NAME,
@@ -599,11 +605,7 @@ namespace QgsWms
     const thread_local QRegularExpression composerParamRegExp( QStringLiteral( "^MAP\\d+:" ), QRegularExpression::CaseInsensitiveOption );
     if ( key.contains( composerParamRegExp ) )
     {
-#if QT_VERSION < QT_VERSION_CHECK(5, 15, 2)
-      const int mapId = key.midRef( 3, key.indexOf( ':' ) - 3 ).toInt();
-#else
-      const int mapId = QStringView {key}.mid( 3, key.indexOf( ':' ) - 3 ).toInt();
-#endif
+      const int mapId = QStringView {key} .mid( 3, key.indexOf( ':' ) - 3 ).toInt();
       const QString theKey = key.mid( key.indexOf( ':' ) + 1 );
       const QgsWmsParameter::Name name = QgsWmsParameter::name( theKey );
 
@@ -988,6 +990,11 @@ namespace QgsWms
     return mWmsParameters.value( QgsWmsParameter::RULE ).toString();
   }
 
+  bool QgsWmsParameters::showRuleDetailsAsBool() const
+  {
+    return mWmsParameters.value( QgsWmsParameter::SHOWRULEDETAILS ).toBool();
+  }
+
   QString QgsWmsParameters::ruleLabel() const
   {
     return mWmsParameters.value( QgsWmsParameter::RULELABEL ).toString();
@@ -1264,7 +1271,7 @@ namespace QgsWms
       font.setPointSizeF( layerFontSizeAsDouble() );
 
     if ( !layerFontFamily().isEmpty() )
-      font.setFamily( layerFontFamily() );
+      QgsFontUtils::setFontFamily( font, layerFontFamily() );
 
     return font;
   }
@@ -1281,7 +1288,7 @@ namespace QgsWms
       font.setPointSizeF( itemFontSizeAsDouble() );
 
     if ( !itemFontFamily().isEmpty() )
-      font.setFamily( itemFontFamily() );
+      QgsFontUtils::setFontFamily( font, itemFontFamily() );
 
     return font;
   }
@@ -1353,7 +1360,7 @@ namespace QgsWms
 
   QStringList QgsWmsParameters::highlightLabelString() const
   {
-    return mWmsParameters.value( QgsWmsParameter::HIGHLIGHT_LABELSTRING ).toStringList( ';' );
+    return mWmsParameters.value( QgsWmsParameter::HIGHLIGHT_LABELSTRING ).toStringList( ';', false );
   }
 
   QStringList QgsWmsParameters::highlightLabelSize() const
@@ -2097,9 +2104,32 @@ namespace QgsWms
     return mWmsParameters.value( QgsWmsParameter::WITH_GEOMETRY ).toBool();
   }
 
+  QString QgsWmsParameters::withMapTipAsString() const
+  {
+    return mWmsParameters.value( QgsWmsParameter::WITH_MAPTIP ).toString();
+  }
+
   bool QgsWmsParameters::withMapTip() const
   {
-    return mWmsParameters.value( QgsWmsParameter::WITH_MAPTIP ).toBool();
+    const QString mStr = withMapTipAsString();
+
+    if ( mStr.startsWith( QLatin1String( "true" ), Qt::CaseInsensitive ) ||
+         mStr.startsWith( QLatin1String( "on" ), Qt::CaseInsensitive ) ||
+         mStr.startsWith( QLatin1String( "yes" ), Qt::CaseInsensitive ) ||
+         mStr.startsWith( QLatin1Char( '1' ) ) )
+      return true;
+    else
+      return false;
+  }
+
+  bool QgsWmsParameters::htmlInfoOnlyMapTip() const
+  {
+    const QString mStr = withMapTipAsString();
+
+    if ( mStr.startsWith( QLatin1String( "html_fi_only_maptip" ), Qt::CaseInsensitive ) )
+      return true;
+    else
+      return false;
   }
 
   bool QgsWmsParameters::withDisplayName() const

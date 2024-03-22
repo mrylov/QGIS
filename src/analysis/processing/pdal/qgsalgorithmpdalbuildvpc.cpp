@@ -59,7 +59,7 @@ QgsPdalBuildVpcAlgorithm *QgsPdalBuildVpcAlgorithm::createInstance() const
 
 void QgsPdalBuildVpcAlgorithm::initAlgorithm( const QVariantMap & )
 {
-  addParameter( new QgsProcessingParameterMultipleLayers( QStringLiteral( "LAYERS" ), QObject::tr( "Input layers" ), QgsProcessing::TypePointCloud ) );
+  addParameter( new QgsProcessingParameterMultipleLayers( QStringLiteral( "LAYERS" ), QObject::tr( "Input layers" ), Qgis::ProcessingSourceType::PointCloud ) );
   addParameter( new QgsProcessingParameterBoolean( QStringLiteral( "BOUNDARY" ), QObject::tr( "Calculate boundary polygons" ), false ) );
   addParameter( new QgsProcessingParameterBoolean( QStringLiteral( "STATISTICS" ), QObject::tr( "Calculate statistics" ), false ) );
   addParameter( new QgsProcessingParameterBoolean( QStringLiteral( "OVERVIEW" ), QObject::tr( "Build overview point cloud" ), false ) );
@@ -117,10 +117,23 @@ QStringList QgsPdalBuildVpcAlgorithm::createArgumentLists( const QVariantMap &pa
 
   applyThreadsParameter( args, context );
 
+  const QString fileName = QgsProcessingUtils::generateTempFilename( QStringLiteral( "inputFiles.txt" ), &context );
+  QFile listFile( fileName );
+  if ( !listFile.open( QIODevice::WriteOnly | QIODevice::Truncate ) )
+  {
+    throw QgsProcessingException( QObject::tr( "Could not create input file list %1" ).arg( fileName ) );
+  }
+
+  QTextStream out( &listFile );
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+  out.setCodec( "UTF-8" );
+#endif
   for ( const QgsMapLayer *layer : std::as_const( layers ) )
   {
-    args << layer->source();
+    out << layer->source() << "\n";
   }
+
+  args << QStringLiteral( "--input-file-list=%1" ).arg( fileName );
 
   return args;
 }

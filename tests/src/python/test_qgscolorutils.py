@@ -9,7 +9,6 @@ __author__ = 'Nyall Dawson'
 __date__ = '06/07/2022'
 __copyright__ = 'Copyright 2022, The QGIS Project'
 
-import qgis  # NOQA
 from qgis.PyQt.QtGui import QColor
 from qgis.PyQt.QtXml import QDomDocument
 from qgis.core import QgsColorUtils, QgsReadWriteContext, QgsSymbolLayerUtils
@@ -23,7 +22,7 @@ class TestQgsColorUtils(unittest.TestCase):
         """Run before all tests"""
         super().setUpClass()
         try:
-            QColor.ExtendedRgb
+            QColor.Spec.ExtendedRgb
             cls.has_extended_rgb = True
         except AttributeError:
             cls.has_extended_rgb = False
@@ -47,7 +46,7 @@ class TestQgsColorUtils(unittest.TestCase):
         QgsColorUtils.writeXml(color, 'my_color', doc, element, context)
         res = QgsColorUtils.readXml(element, 'my_color', context)
         self.assertTrue(res.isValid())
-        self.assertEqual(res.spec(), QColor.Rgb)
+        self.assertEqual(res.spec(), QColor.Spec.Rgb)
         self.assertAlmostEqual(res.redF(), 1 / 65536, 5)
         self.assertAlmostEqual(res.greenF(), 2 / 65536, 5)
         self.assertAlmostEqual(res.blueF(), 3 / 65536, 5)
@@ -57,7 +56,7 @@ class TestQgsColorUtils(unittest.TestCase):
         QgsColorUtils.writeXml(color, 'my_color', doc, element, context)
         res = QgsColorUtils.readXml(element, 'my_color', context)
         self.assertTrue(res.isValid())
-        self.assertEqual(res.spec(), QColor.Rgb)
+        self.assertEqual(res.spec(), QColor.Spec.Rgb)
         self.assertEqual(res.red(), 16)
         self.assertEqual(res.green(), 17)
         self.assertEqual(res.blue(), 18)
@@ -69,7 +68,7 @@ class TestQgsColorUtils(unittest.TestCase):
             QgsColorUtils.writeXml(color, 'my_rgb_ex_color', doc, element, context)
             res = QgsColorUtils.readXml(element, 'my_rgb_ex_color', context)
             self.assertTrue(res.isValid())
-            self.assertEqual(res.spec(), QColor.ExtendedRgb)
+            self.assertEqual(res.spec(), QColor.Spec.ExtendedRgb)
             self.assertAlmostEqual(res.redF(), -1 / 65536, 5)
             self.assertAlmostEqual(res.greenF(), 2 / 65536, 5)
             self.assertAlmostEqual(res.blueF(), 3 / 65536, 5)
@@ -80,7 +79,7 @@ class TestQgsColorUtils(unittest.TestCase):
         QgsColorUtils.writeXml(color, 'my_hsv_color', doc, element, context)
         res = QgsColorUtils.readXml(element, 'my_hsv_color', context)
         self.assertTrue(res.isValid())
-        self.assertEqual(res.spec(), QColor.Hsv)
+        self.assertEqual(res.spec(), QColor.Spec.Hsv)
         self.assertAlmostEqual(res.hueF(), 1 / 65536, 4)
         self.assertAlmostEqual(res.hsvSaturationF(), 2 / 65536, 5)
         self.assertAlmostEqual(res.valueF(), 3 / 65536, 5)
@@ -91,7 +90,7 @@ class TestQgsColorUtils(unittest.TestCase):
         QgsColorUtils.writeXml(color, 'my_hsl_color', doc, element, context)
         res = QgsColorUtils.readXml(element, 'my_hsl_color', context)
         self.assertTrue(res.isValid())
-        self.assertEqual(res.spec(), QColor.Hsl)
+        self.assertEqual(res.spec(), QColor.Spec.Hsl)
         self.assertAlmostEqual(res.hslHueF(), 111 / 65536, 5)
         self.assertAlmostEqual(res.hslSaturationF(), 12222 / 65536, 5)
         self.assertAlmostEqual(res.lightnessF(), 333 / 65536, 4)
@@ -102,7 +101,7 @@ class TestQgsColorUtils(unittest.TestCase):
         QgsColorUtils.writeXml(color, 'my_cmyk_color', doc, element, context)
         res = QgsColorUtils.readXml(element, 'my_cmyk_color', context)
         self.assertTrue(res.isValid())
-        self.assertEqual(res.spec(), QColor.Cmyk)
+        self.assertEqual(res.spec(), QColor.Spec.Cmyk)
         self.assertAlmostEqual(res.cyanF(), 1 / 65536, 4)
         self.assertAlmostEqual(res.magentaF(), 2 / 65536, 4)
         self.assertAlmostEqual(res.yellowF(), 3 / 65536, 4)
@@ -128,7 +127,7 @@ class TestQgsColorUtils(unittest.TestCase):
         string = QgsColorUtils.colorToString(color)
         res = QgsColorUtils.colorFromString(string)
         self.assertTrue(res.isValid())
-        self.assertEqual(res.spec(), QColor.Rgb)
+        self.assertEqual(res.spec(), QColor.Spec.Rgb)
         self.assertAlmostEqual(res.redF(), 1 / 65536, 5)
         self.assertAlmostEqual(res.greenF(), 2 / 65536, 5)
         self.assertAlmostEqual(res.blueF(), 3 / 65536, 5)
@@ -138,7 +137,7 @@ class TestQgsColorUtils(unittest.TestCase):
         string = QgsColorUtils.colorToString(color)
         res = QgsColorUtils.colorFromString(string)
         self.assertTrue(res.isValid())
-        self.assertEqual(res.spec(), QColor.Rgb)
+        self.assertEqual(res.spec(), QColor.Spec.Rgb)
         self.assertEqual(res.red(), 16)
         self.assertEqual(res.green(), 17)
         self.assertEqual(res.blue(), 18)
@@ -150,7 +149,7 @@ class TestQgsColorUtils(unittest.TestCase):
             string = QgsColorUtils.colorToString(color)
             res = QgsColorUtils.colorFromString(string)
             self.assertTrue(res.isValid())
-            self.assertEqual(res.spec(), QColor.ExtendedRgb)
+            self.assertEqual(res.spec(), QColor.Spec.ExtendedRgb)
             self.assertAlmostEqual(res.redF(), -1 / 65536, 5)
             self.assertAlmostEqual(res.greenF(), 2 / 65536, 5)
             self.assertAlmostEqual(res.blueF(), 3 / 65536, 5)
@@ -161,7 +160,7 @@ class TestQgsColorUtils(unittest.TestCase):
         string = QgsColorUtils.colorToString(color)
         res = QgsColorUtils.colorFromString(string)
         self.assertTrue(res.isValid())
-        self.assertEqual(res.spec(), QColor.Hsv)
+        self.assertEqual(res.spec(), QColor.Spec.Hsv)
         self.assertAlmostEqual(res.hueF(), 1 / 65536, 4)
         self.assertAlmostEqual(res.hsvSaturationF(), 2 / 65536, 5)
         self.assertAlmostEqual(res.valueF(), 3 / 65536, 5)
@@ -172,7 +171,7 @@ class TestQgsColorUtils(unittest.TestCase):
         string = QgsColorUtils.colorToString(color)
         res = QgsColorUtils.colorFromString(string)
         self.assertTrue(res.isValid())
-        self.assertEqual(res.spec(), QColor.Hsl)
+        self.assertEqual(res.spec(), QColor.Spec.Hsl)
         self.assertAlmostEqual(res.hslHueF(), 111 / 65536, 5)
         self.assertAlmostEqual(res.hslSaturationF(), 12222 / 65536, 5)
         self.assertAlmostEqual(res.lightnessF(), 333 / 65536, 4)
@@ -183,7 +182,7 @@ class TestQgsColorUtils(unittest.TestCase):
         string = QgsColorUtils.colorToString(color)
         res = QgsColorUtils.colorFromString(string)
         self.assertTrue(res.isValid())
-        self.assertEqual(res.spec(), QColor.Cmyk)
+        self.assertEqual(res.spec(), QColor.Spec.Cmyk)
         self.assertAlmostEqual(res.cyanF(), 1 / 65536, 4)
         self.assertAlmostEqual(res.magentaF(), 2 / 65536, 4)
         self.assertAlmostEqual(res.yellowF(), 3 / 65536, 4)

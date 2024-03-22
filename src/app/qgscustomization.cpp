@@ -568,7 +568,7 @@ bool QgsCustomizationDialog::catchOn()
 
 void QgsCustomizationDialog::showHelp()
 {
-  QgsHelp::openHelp( QStringLiteral( "introduction/qgis_configuration.html#customization" ) );
+  QgsHelp::openHelp( QStringLiteral( "introduction/qgis_configuration.html#sec-customization" ) );
 }
 
 
@@ -739,8 +739,8 @@ void QgsCustomization::createTreeItemBrowser()
   const auto constProviders = QgsApplication::dataItemProviderRegistry()->providers();
   for ( QgsDataItemProvider *pr : constProviders )
   {
-    int capabilities = pr->capabilities();
-    if ( capabilities != QgsDataProvider::NoDataCapabilities )
+    const Qgis::DataItemProviderCapabilities capabilities = pr->capabilities();
+    if ( capabilities != Qgis::DataItemProviderCapabilities( Qgis::DataItemProviderCapability::NoCapabilities ) )
     {
       QStringList item;
       item << pr->name() << QObject::tr( "Data Item Provider: %1" ).arg( pr->name() );

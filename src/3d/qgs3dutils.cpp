@@ -48,6 +48,14 @@
 #include <Qt3DExtras/QPhongMaterial>
 #include <Qt3DRender/QRenderSettings>
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+#include <Qt3DRender/QBuffer>
+typedef Qt3DRender::QBuffer Qt3DQBuffer;
+#else
+#include <Qt3DCore/QBuffer>
+typedef Qt3DCore::QBuffer Qt3DQBuffer;
+#endif
+
 // declared here as Qgs3DTypes has no cpp file
 const char *Qgs3DTypes::PROP_NAME_3D_RENDERER_FLAG = "PROP_NAME_3D_RENDERER_FLAG";
 
@@ -142,6 +150,23 @@ QImage Qgs3DUtils::captureSceneDepthBuffer( QgsAbstract3DEngine &engine, Qgs3DMa
   engine.renderSettings()->setRenderPolicy( Qt3DRender::QRenderSettings::RenderPolicy::OnDemand );
   return resImage;
 }
+
+
+double Qgs3DUtils::calculateEntityGpuMemorySize( Qt3DCore::QEntity *entity )
+{
+  long long usedGpuMemory = 0;
+  for ( Qt3DQBuffer *buffer : entity->findChildren<Qt3DQBuffer *>() )
+  {
+    usedGpuMemory += buffer->data().size();
+  }
+  for ( Qt3DRender::QTexture2D *tex : entity->findChildren<Qt3DRender::QTexture2D *>() )
+  {
+    // TODO : lift the assumption that the texture is RGBA
+    usedGpuMemory += tex->width() * tex->height() * 4;
+  }
+  return usedGpuMemory / 1024.0 / 1024.0;
+}
+
 
 bool Qgs3DUtils::exportAnimation( const Qgs3DAnimationSettings &animationSettings,
                                   Qgs3DMapSettings &mapSettings,
@@ -326,7 +351,7 @@ Qgs3DTypes::CullingMode Qgs3DUtils::cullingModeFromString( const QString &str )
     return Qgs3DTypes::NoCulling;
 }
 
-float Qgs3DUtils::clampAltitude( const QgsPoint &p, Qgis::AltitudeClamping altClamp, Qgis::AltitudeBinding altBind, float height, const QgsPoint &centroid, const Qgs3DMapSettings &map )
+float Qgs3DUtils::clampAltitude( const QgsPoint &p, Qgis::AltitudeClamping altClamp, Qgis::AltitudeBinding altBind, float offset, const QgsPoint &centroid, const Qgs3DMapSettings &map )
 {
   float terrainZ = 0;
   switch ( altClamp )
@@ -358,11 +383,11 @@ float Qgs3DUtils::clampAltitude( const QgsPoint &p, Qgis::AltitudeClamping altCl
     }
   }
 
-  const float z = ( terrainZ + geomZ ) * map.terrainVerticalScale() + height;
+  const float z = ( terrainZ + geomZ ) * static_cast<float>( map.terrainVerticalScale() ) + offset;
   return z;
 }
 
-void Qgs3DUtils::clampAltitudes( QgsLineString *lineString, Qgis::AltitudeClamping altClamp, Qgis::AltitudeBinding altBind, const QgsPoint &centroid, float height, const Qgs3DMapSettings &map )
+void Qgs3DUtils::clampAltitudes( QgsLineString *lineString, Qgis::AltitudeClamping altClamp, Qgis::AltitudeBinding altBind, const QgsPoint &centroid, float offset, const Qgs3DMapSettings &map )
 {
   for ( int i = 0; i < lineString->nCoordinates(); ++i )
   {
@@ -406,13 +431,13 @@ void Qgs3DUtils::clampAltitudes( QgsLineString *lineString, Qgis::AltitudeClampi
         break;
     }
 
-    const float z = ( terrainZ + geomZ ) * map.terrainVerticalScale() + height;
+    const float z = ( terrainZ + geomZ ) * static_cast<float>( map.terrainVerticalScale() ) + offset;
     lineString->setZAt( i, z );
   }
 }
 
 
-bool Qgs3DUtils::clampAltitudes( QgsPolygon *polygon, Qgis::AltitudeClamping altClamp, Qgis::AltitudeBinding altBind, float height, const Qgs3DMapSettings &map )
+bool Qgs3DUtils::clampAltitudes( QgsPolygon *polygon, Qgis::AltitudeClamping altClamp, Qgis::AltitudeBinding altBind, float offset, const Qgs3DMapSettings &map )
 {
   if ( !polygon->is3D() )
     polygon->addZValue( 0 );
@@ -433,7 +458,7 @@ bool Qgs3DUtils::clampAltitudes( QgsPolygon *polygon, Qgis::AltitudeClamping alt
   if ( !lineString )
     return false;
 
-  clampAltitudes( lineString, altClamp, altBind, centroid, height, map );
+  clampAltitudes( lineString, altClamp, altBind, centroid, offset, map );
 
   for ( int i = 0; i < polygon->numInteriorRings(); ++i )
   {
@@ -442,7 +467,7 @@ bool Qgs3DUtils::clampAltitudes( QgsPolygon *polygon, Qgis::AltitudeClamping alt
     if ( !lineString )
       return false;
 
-    clampAltitudes( lineString, altClamp, altBind, centroid, height, map );
+    clampAltitudes( lineString, altClamp, altBind, centroid, offset, map );
   }
   return true;
 }
@@ -821,7 +846,7 @@ QHash<QgsMapLayer *, QVector<QgsRayCastingUtils::RayHit>> Qgs3DUtils::castRay( Q
   return results;
 }
 
-float Qgs3DUtils::screenSpaceError( float epsilon, float distance, float screenSize, float fov )
+float Qgs3DUtils::screenSpaceError( float epsilon, float distance, int screenSize, float fov )
 {
   /* This routine approximately calculates how an error (epsilon) of an object in world coordinates
    * at given distance (between camera and the object) will look like in screen coordinates.
@@ -843,6 +868,37 @@ float Qgs3DUtils::screenSpaceError( float epsilon, float distance, float screenS
    *       \|/    angle = field of view
    *       camera
    */
-  float phi = epsilon * screenSize / ( 2 * distance * tan( fov * M_PI / ( 2 * 180 ) ) );
+  float phi = epsilon * static_cast<float>( screenSize ) / static_cast<float>( 2 * distance *  tan( fov * M_PI / ( 2 * 180 ) ) );
   return phi;
+}
+
+void Qgs3DUtils::computeBoundingBoxNearFarPlanes( const QgsAABB &bbox, const QMatrix4x4 &viewMatrix, float &fnear, float &ffar )
+{
+  fnear = 1e9;
+  ffar = 0;
+
+  for ( int i = 0; i < 8; ++i )
+  {
+    const QVector4D p( ( ( i >> 0 ) & 1 ) ? bbox.xMin : bbox.xMax,
+                       ( ( i >> 1 ) & 1 ) ? bbox.yMin : bbox.yMax,
+                       ( ( i >> 2 ) & 1 ) ? bbox.zMin : bbox.zMax, 1 );
+
+    const QVector4D pc = viewMatrix * p;
+
+    const float dst = -pc.z();  // in camera coordinates, x grows right, y grows down, z grows to the back
+    fnear = std::min( fnear, dst );
+    ffar = std::max( ffar, dst );
+  }
+}
+
+Qt3DRender::QCullFace::CullingMode Qgs3DUtils::qt3DcullingMode( Qgs3DTypes::CullingMode mode )
+{
+  switch ( mode )
+  {
+    case Qgs3DTypes::NoCulling:    return Qt3DRender::QCullFace::NoCulling;
+    case Qgs3DTypes::Front:        return Qt3DRender::QCullFace::Front;
+    case Qgs3DTypes::Back:         return Qt3DRender::QCullFace::Back;
+    case Qgs3DTypes::FrontAndBack: return Qt3DRender::QCullFace::FrontAndBack;
+  }
+  return Qt3DRender::QCullFace::NoCulling;
 }

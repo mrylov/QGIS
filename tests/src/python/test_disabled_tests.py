@@ -17,7 +17,8 @@ from qgis.PyQt.QtCore import QT_VERSION, QEventLoop, QLocale
 from qgis.PyQt.QtGui import QValidator
 from qgis.core import QgsDataCollectionItem, QgsLayerItem, QgsVectorLayer
 from qgis.gui import QgsFieldValidator
-from qgis.testing import start_app, unittest
+import unittest
+from qgis.testing import start_app, QgisTestCase
 
 from utilities import unitTestDataPath
 
@@ -37,12 +38,12 @@ class PyQgsDataConnectionItem(QgsDataCollectionItem):
         children = []
 
         # Add a Python object as child
-        pyQgsLayerItem = PyQgsLayerItem(None, "name", "", "uri", QgsLayerItem.Vector, "my_provider")
+        pyQgsLayerItem = PyQgsLayerItem(None, "name", "", "uri", QgsLayerItem.LayerType.Vector, "my_provider")
         pyQgsLayerItem.tabSetDestroyedFlag = self.tabSetDestroyedFlag
         children.append(pyQgsLayerItem)
 
         # Add a C++ object as child
-        children.append(QgsLayerItem(None, "name2", "", "uri", QgsLayerItem.Vector, "my_provider"))
+        children.append(QgsLayerItem(None, "name2", "", "uri", QgsLayerItem.LayerType.Vector, "my_provider"))
 
         return children
 
@@ -58,7 +59,7 @@ DO NOT ADD TESTS TO THIS FILE WITHOUT A DETAILED EXPLANATION ON WHY!!!!
 """
 
 
-class TestQgsDisabledTests(unittest.TestCase):
+class TestQgsDisabledTests(QgisTestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -77,6 +78,12 @@ class TestQgsDisabledTests(unittest.TestCase):
         """Run after all tests."""
         cls.vl = None
         super().tearDownClass()
+
+    def test_dummy(self):
+        """
+        Dummy test so that test suite contains at least one enabled test
+        """
+        pass
 
     @unittest.skipIf(QT_VERSION >= 0x050d00, 'Crashes on newer Qt/PyQt versions')
     def testPythonCreateChildrenCalledFromCplusplus(self):
@@ -116,7 +123,7 @@ class TestQgsDisabledTests(unittest.TestCase):
 
             # wait for populate() to have done its job
             item.stateChanged.connect(loop.quit)
-            loop.exec_()
+            loop.exec()
 
             # Python object PyQgsLayerItem should still be alive
             self.assertFalse(tabSetDestroyedFlag[0])
@@ -131,7 +138,7 @@ class TestQgsDisabledTests(unittest.TestCase):
             # Delete the object and make sure all deferred deletions are processed
             item.destroyed.connect(loop.quit)
             item.deleteLater()
-            loop.exec_()
+            loop.exec()
 
             # Check that the PyQgsLayerItem Python object is now destroyed
             self.assertTrue(tabSetDestroyedFlag[0])
@@ -153,12 +160,12 @@ class TestQgsDisabledTests(unittest.TestCase):
                 self.assertEqual(validator.validate('-' + value, 0)[0], expected, '-' + value)
 
         # Valid
-        _test('0.1234', QValidator.Acceptable)
+        _test('0.1234', QValidator.State.Acceptable)
 
         # If precision is > 0, regexp validator is used (and it does not support sci notation)
         if field.precision() == 0:
-            _test('12345.1234e+123', QValidator.Acceptable)
-            _test('12345.1234e-123', QValidator.Acceptable)
+            _test('12345.1234e+123', QValidator.State.Acceptable)
+            _test('12345.1234e-123', QValidator.State.Acceptable)
 
     @unittest.skipIf(QT_VERSION >= 0x050d00, 'Fails newer Qt/PyQt versions')
     def test_doubleValidatorCommaLocale(self):
@@ -174,7 +181,7 @@ class TestQgsDisabledTests(unittest.TestCase):
 
         When fixed these tests should be merged back into test_qgsfieldvalidator.py
         """
-        QLocale.setDefault(QLocale(QLocale.German, QLocale.Germany))
+        QLocale.setDefault(QLocale(QLocale.Language.German, QLocale.Country.Germany))
         self.assertEqual(QLocale().decimalPoint(), ',')
         field = self.vl.fields()[self.vl.fields().indexFromName('double_field')]
         self._fld_checker(field)

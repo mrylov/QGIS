@@ -123,6 +123,7 @@ class CORE_EXPORT QgsOgrProviderUtils
     static QStringList fileExtensions();
     static QStringList directoryExtensions();
     static QStringList wildcards();
+    static QStringList tableNamesFromSelectSQL( const QString &sql );
 
     //! Whether the file is a local file.
     static bool IsLocalFile( const QString &path );
@@ -276,6 +277,29 @@ class CORE_EXPORT QgsOgrProviderUtils
      * \param ogrDriverName the OGR/GDAL driver name (e.g. "GPKG")
      */
     static bool saveConnection( const QString &path, const QString &ogrDriverName );
+
+    /**
+     * Prevent immediate dataset closing when it could be closed.
+     * This is useful when opening a dataset with many layers.
+     * Must be paired with decrementDeferDatasetClosingCounter.
+     * It is recommended to use the QgsOgrProviderUtils::DeferDatasetClosing
+     * class instead to guarantee that correct pairing.
+     */
+    static void incrementDeferDatasetClosingCounter();
+
+    //! End the action started by incrementDeferDatasetClosingCounter()
+    static void decrementDeferDatasetClosingCounter();
+
+    //! Helper class for  QgsOgrProviderUtils::incrementDeferDatasetClosingCounter();
+    class DeferDatasetClosing
+    {
+      public:
+        //! Constructor: increment counter
+        DeferDatasetClosing() { QgsOgrProviderUtils::incrementDeferDatasetClosingCounter(); }
+
+        //! Destructor: decrement counter
+        ~DeferDatasetClosing() { QgsOgrProviderUtils::decrementDeferDatasetClosingCounter(); }
+    };
 };
 
 
@@ -404,6 +428,9 @@ class QgsOgrLayer
     //! Returns layer name
     QByteArray name();
 
+    //! Return OGRERR_NONE if lmyer is not sqlite OR if layer is sqlite but with spatialite, else returns OGRERR_UNSUPPORTED_OPERATION
+    OGRErr isSpatialiteEnabled();
+
     //! Wrapper of OGR_L_GetLayerCount
     int GetLayerCount();
 
@@ -434,8 +461,14 @@ class QgsOgrLayer
     //! Return an total feature count based on meta data from package container
     GIntBig GetTotalFeatureCountFromMetaData() const;
 
-    //! Wrapper of OGR_L_GetLayerCount
+    //! Wrapper of OGR_L_GetExtent
     OGRErr GetExtent( OGREnvelope *psExtent, bool bForce );
+
+    //! Wrapper of OGR_L_GetExtent3D
+    OGRErr GetExtent3D( OGREnvelope3D *psExtent, bool bForce );
+
+    //! Combines 3D envelopes for all feature to find the extent. Slow process...
+    OGRErr computeExtent3DSlowly( OGREnvelope3D *extent );
 
     //! Wrapper of OGR_L_GetLayerCount
     OGRErr CreateFeature( OGRFeatureH hFeature );

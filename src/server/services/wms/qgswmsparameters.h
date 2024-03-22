@@ -156,6 +156,7 @@ namespace QgsWms
         RULELABEL,
         SCALE,
         SELECTION,
+        SHOWRULEDETAILS,
         HIGHLIGHT_GEOM,
         HIGHLIGHT_SYMBOL,
         HIGHLIGHT_LABELSTRING,
@@ -329,7 +330,6 @@ namespace QgsWms
    * \ingroup server
    * \class QgsWms::QgsWmsParameters
    * \brief Provides an interface to retrieve and manipulate WMS parameters received from the client.
-   * \since QGIS 3.0
    */
   class QgsWmsParameters : public QgsServerParameters
   {
@@ -450,6 +450,13 @@ namespace QgsWms
        * \throws QgsBadRequestException
        */
       int heightAsInt() const;
+
+      /**
+       * Returns SHOWRULEDETAILS as a bool. An exception is raised if an invalid
+       * parameter is found.
+       * \since QGIS 3.36
+       */
+      bool showRuleDetailsAsBool() const;
 
       /**
        * Returns SRCWIDTH parameter or an empty string if not defined.
@@ -1301,10 +1308,25 @@ namespace QgsWms
       bool withGeometry() const;
 
       /**
+       * \brief withMapTipAsString
+       * \returns WITH_MAPTIP parameter as string
+       * \since QGIS 3.36
+       */
+      QString withMapTipAsString() const;
+
+      /**
        * \brief withMapTip
        * \returns TRUE if maptip information is requested for feature info response
        */
       bool withMapTip() const;
+
+      /**
+       * Returns TRUE if only maptip information is requested for HTML
+       * feature info response
+       * \returns htmlInfoOnlyMapTip
+       * \since QGIS 3.36
+       */
+      bool htmlInfoOnlyMapTip() const;
 
       /**
        * \brief withDisplayName

@@ -2,7 +2,6 @@
 # Files
 
 if(MSVC)
-  add_definitions(-DWIN32_LEAN_AND_MEAN)
   set(PDAL_LIBRARIES ${PDAL_LIBRARIES} ws2_32)
 endif(MSVC)
 
@@ -47,8 +46,7 @@ set(UNTWINE_SRCS
   ${CMAKE_SOURCE_DIR}/external/untwine/epf/Reprocessor.cpp
   ${CMAKE_SOURCE_DIR}/external/untwine/epf/Writer.cpp
 
-  ${CMAKE_SOURCE_DIR}/external/untwine/untwine/Las.cpp
-  ${CMAKE_SOURCE_DIR}/external/untwine/untwine/MapFile.cpp
+  ${CMAKE_SOURCE_DIR}/external/untwine/untwine/Common.cpp
   ${CMAKE_SOURCE_DIR}/external/untwine/untwine/ProgressWriter.cpp
   ${CMAKE_SOURCE_DIR}/external/untwine/untwine/ThreadPool.cpp
   ${CMAKE_SOURCE_DIR}/external/untwine/untwine/Untwine.cpp
@@ -77,8 +75,6 @@ set(UNTWINE_HDRS
   ${CMAKE_SOURCE_DIR}/external/untwine/untwine/Common.hpp
   ${CMAKE_SOURCE_DIR}/external/untwine/untwine/FileDimInfo.hpp
   ${CMAKE_SOURCE_DIR}/external/untwine/untwine/GridKey.hpp
-  ${CMAKE_SOURCE_DIR}/external/untwine/untwine/Las.hpp
-  ${CMAKE_SOURCE_DIR}/external/untwine/untwine/MapFile.hpp
   ${CMAKE_SOURCE_DIR}/external/untwine/untwine/Point.hpp
   ${CMAKE_SOURCE_DIR}/external/untwine/untwine/ProgressWriter.hpp
   ${CMAKE_SOURCE_DIR}/external/untwine/untwine/ThreadPool.hpp
@@ -149,10 +145,6 @@ include_directories(
   ${CMAKE_SOURCE_DIR}/external/untwine/api
 )
 
-include_directories(SYSTEM
-  ${PDAL_INCLUDE_DIR}
-)
-
 add_executable(untwine ${UNTWINE_SRCS} ${UNTWINE_HDRS})
 target_compile_features(untwine PRIVATE cxx_std_17)
 
@@ -182,14 +174,13 @@ if (PDAL_2_5_OR_HIGHER)
   )
 
   target_include_directories(pdal_wrench PRIVATE
-    ${PDAL_INCLUDE_DIR}
-    ${GDAL_INCLUDE_DIR}
     ${CMAKE_SOURCE_DIR}/external
   )
 
   target_link_libraries (pdal_wrench PRIVATE
     ${PDAL_LIBRARIES}
-    ${GDAL_LIBRARY}
+    GDAL::GDAL
+    Threads::Threads
   )
 
   install(TARGETS pdal_wrench

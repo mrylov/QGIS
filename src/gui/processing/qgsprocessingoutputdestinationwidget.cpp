@@ -59,7 +59,7 @@ QgsProcessingLayerOutputDestinationWidget::QgsProcessingLayerOutputDestinationWi
   if ( !mParameter->defaultValueForGui().isValid() )
   {
     // no default value -- we default to either skipping the output or a temporary output, depending on the createByDefault value
-    if ( mParameter->flags() & QgsProcessingParameterDefinition::FlagOptional && !mParameter->createByDefault() )
+    if ( mParameter->flags() & Qgis::ProcessingParameterFlag::Optional && !mParameter->createByDefault() )
       setValue( QVariant() );
     else
       setValue( QgsProcessing::TEMPORARY_OUTPUT );
@@ -86,7 +86,7 @@ void QgsProcessingLayerOutputDestinationWidget::setValue( const QVariant &value 
   mUseRemapping = false;
   if ( !value.isValid() || ( value.type() == QVariant::String && value.toString().isEmpty() ) )
   {
-    if ( mParameter->flags() & QgsProcessingParameterDefinition::FlagOptional )
+    if ( mParameter->flags() & Qgis::ProcessingParameterFlag::Optional )
       skipOutput();
     else
       saveToTemporary();
@@ -158,7 +158,7 @@ QVariant QgsProcessingLayerOutputDestinationWidget::value() const
     key = leText->text();
   }
 
-  if ( key.isEmpty() && mParameter->flags() & QgsProcessingParameterDefinition::FlagOptional )
+  if ( key.isEmpty() && mParameter->flags() & Qgis::ProcessingParameterFlag::Optional )
     return QVariant();
 
   QString provider;
@@ -234,7 +234,7 @@ void QgsProcessingLayerOutputDestinationWidget::menuAboutToShow()
 
   if ( !mDefaultSelection )
   {
-    if ( mParameter->flags() & QgsProcessingParameterDefinition::FlagOptional )
+    if ( mParameter->flags() & Qgis::ProcessingParameterFlag::Optional )
     {
       QAction *actionSkipOutput = new QAction( tr( "Skip Output" ), this );
       connect( actionSkipOutput, &QAction::triggered, this, &QgsProcessingLayerOutputDestinationWidget::skipOutput );
@@ -432,6 +432,9 @@ void QgsProcessingLayerOutputDestinationWidget::selectFile()
     emit skipOutputChanged( false );
     emit destinationChanged();
   }
+  // return dialog focus on Mac
+  activateWindow();
+  raise();
 }
 
 void QgsProcessingLayerOutputDestinationWidget::saveToGeopackage()
@@ -442,6 +445,9 @@ void QgsProcessingLayerOutputDestinationWidget::saveToGeopackage()
     lastPath = settings.value( QStringLiteral( "/Processing/Configuration/OUTPUTS_FOLDER" ), QString() ).toString();
 
   QString filename =  QFileDialog::getSaveFileName( this, tr( "Save to GeoPackage" ), lastPath, tr( "GeoPackage files (*.gpkg);;All files (*.*)" ), nullptr, QFileDialog::DontConfirmOverwrite );
+  // return dialog focus on Mac
+  activateWindow();
+  raise();
 
   if ( filename.isEmpty() )
     return;
@@ -574,7 +580,7 @@ void QgsProcessingLayerOutputDestinationWidget::setAppendDestination( const QStr
   props.insert( mParameter->name(), uri );
 
   const QgsProcessingAlgorithm::VectorProperties outputProps = alg->sinkProperties( mParameter->name(), props, *mContext, QMap<QString, QgsProcessingAlgorithm::VectorProperties >() );
-  if ( outputProps.availability == QgsProcessingAlgorithm::Available )
+  if ( outputProps.availability == Qgis::ProcessingPropertyAvailability::Available )
   {
     if ( QgsPanelWidget *panel = QgsPanelWidget::findParentPanel( this ) )
     {

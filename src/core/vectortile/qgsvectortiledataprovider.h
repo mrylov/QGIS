@@ -58,7 +58,8 @@ class QgsVectorTileDataProviderSharedData
 
     QCache< QgsTileXYZ, QgsVectorTileRawData > mTileCache;
 
-    QReadWriteLock mMutex; //!< Access to all data members is guarded by the mutex
+    // cannot use a read/write lock here -- see https://bugreports.qt.io/browse/QTBUG-19794
+    QMutex mMutex; //!< Access to all data members is guarded by the mutex
 
 };
 
@@ -177,12 +178,6 @@ class CORE_EXPORT QgsVectorTileDataProvider : public QgsDataProvider
      * \see spriteDefinition()
      */
     virtual QImage spriteImage() const;
-
-    /**
-     * Returns metadata in a format suitable for feeding directly
-     * into a subset of the GUI properties "Metadata" tab.
-     */
-    virtual QString htmlMetadata() const;
 
   protected:
 

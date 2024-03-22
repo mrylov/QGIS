@@ -52,7 +52,7 @@ QString QgsPackageAlgorithm::groupId() const
 
 void QgsPackageAlgorithm::initAlgorithm( const QVariantMap & )
 {
-  addParameter( new QgsProcessingParameterMultipleLayers( QStringLiteral( "LAYERS" ), QObject::tr( "Input layers" ), QgsProcessing::TypeVector ) );
+  addParameter( new QgsProcessingParameterMultipleLayers( QStringLiteral( "LAYERS" ), QObject::tr( "Input layers" ), Qgis::ProcessingSourceType::Vector ) );
   QgsProcessingParameterFileDestination *outputParameter = new QgsProcessingParameterFileDestination( QStringLiteral( "OUTPUT" ), QObject::tr( "Destination GeoPackage" ), QObject::tr( "GeoPackage files (*.gpkg)" ) );
   outputParameter->setMetadata( QVariantMap( {{QStringLiteral( "widget_wrapper" ), QVariantMap( {{QStringLiteral( "dontconfirmoverwrite" ), true }} ) }} ) );
   addParameter( outputParameter );
@@ -395,9 +395,9 @@ QVariantMap QgsPackageAlgorithm::processAlgorithm( const QVariantMap &parameters
         errored = true;
         break;
 
-      case Qgis::LayerType::TiledMesh:
+      case Qgis::LayerType::TiledScene:
         //not supported
-        feedback->pushDebugInfo( QObject::tr( "Packaging tiled mesh layers is not supported." ) );
+        feedback->pushDebugInfo( QObject::tr( "Packaging tiled scene layers is not supported." ) );
         errored = true;
         break;
     }

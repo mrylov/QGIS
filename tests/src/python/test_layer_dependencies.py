@@ -12,7 +12,6 @@ __copyright__ = 'Copyright 2016, The QGIS Project'
 import os
 import tempfile
 
-import qgis  # NOQA
 from qgis.PyQt.QtCore import QPoint, QSize
 from qgis.PyQt.QtTest import QSignalSpy
 from qgis.core import (
@@ -30,14 +29,15 @@ from qgis.core import (
     QgsTolerance,
     QgsVectorLayer,
 )
-from qgis.testing import start_app, unittest
+import unittest
+from qgis.testing import start_app, QgisTestCase
 from qgis.utils import spatialite_connect
 
 # Convenience instances in case you may need them
 start_app()
 
 
-class TestLayerDependencies(unittest.TestCase):
+class TestLayerDependencies(QgisTestCase):
 
     def setUp(self):
         """Run before each test."""
@@ -260,7 +260,7 @@ class TestLayerDependencies(unittest.TestCase):
                 newLinesLayer = l.layer()
         self.assertIsNotNone(newPointsLayer)
         self.assertIsNotNone(newLinesLayer)
-        self.assertTrue(newLinesLayer.id() in [dep.layerId() for dep in newPointsLayer.dependencies()])
+        self.assertIn(newLinesLayer.id(), [dep.layerId() for dep in newPointsLayer.dependencies()])
 
         self.pointsLayer.setDependencies([])
 
@@ -269,11 +269,11 @@ class TestLayerDependencies(unittest.TestCase):
         QgsProject.instance().removeAllMapLayers()
         # set dependencies and add back layers
         self.pointsLayer = QgsVectorLayer(f"dbname='{self.fn}' table=\"node\" (geom) sql=", "points", "spatialite")
-        assert (self.pointsLayer.isValid())
+        self.assertTrue(self.pointsLayer.isValid())
         self.linesLayer = QgsVectorLayer(f"dbname='{self.fn}' table=\"section\" (geom) sql=", "lines", "spatialite")
-        assert (self.linesLayer.isValid())
+        self.assertTrue(self.linesLayer.isValid())
         self.pointsLayer2 = QgsVectorLayer(f"dbname='{self.fn}' table=\"node2\" (geom) sql=", "_points2", "spatialite")
-        assert (self.pointsLayer2.isValid())
+        self.assertTrue(self.pointsLayer2.isValid())
         self.pointsLayer.setDependencies([QgsMapLayerDependency(self.linesLayer.id())])
         self.pointsLayer2.setDependencies([QgsMapLayerDependency(self.pointsLayer.id())])
         # this should update connections between layers

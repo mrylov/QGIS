@@ -33,7 +33,7 @@ email                : sbr00pwb@users.sourceforge.net
 #include "qgsproject.h"
 #include "qgsunittypes.h"
 #include "qgssettings.h"
-#include "qgssymbollayerutils.h"
+#include "qgscolorutils.h"
 #include "qgsfillsymbollayer.h"
 #include "qgsfillsymbol.h"
 #include "qgslinesymbol.h"
@@ -78,8 +78,8 @@ void QgsDecorationScaleBar::projectRead()
   mPreferredSize = QgsProject::instance()->readNumEntry( mConfigurationName, QStringLiteral( "/PreferredSize" ), 30 );
   mStyleIndex = QgsProject::instance()->readNumEntry( mConfigurationName, QStringLiteral( "/Style" ), 0 );
   mSnapping = QgsProject::instance()->readBoolEntry( mConfigurationName, QStringLiteral( "/Snapping" ), true );
-  mColor = QgsSymbolLayerUtils::decodeColor( QgsProject::instance()->readEntry( mConfigurationName, QStringLiteral( "/Color" ), QStringLiteral( "#000000" ) ) );
-  mOutlineColor = QgsSymbolLayerUtils::decodeColor( QgsProject::instance()->readEntry( mConfigurationName, QStringLiteral( "/OutlineColor" ), QStringLiteral( "#FFFFFF" ) ) );
+  mColor = QgsColorUtils::colorFromString( QgsProject::instance()->readEntry( mConfigurationName, QStringLiteral( "/Color" ), QStringLiteral( "#000000" ) ) );
+  mOutlineColor = QgsColorUtils::colorFromString( QgsProject::instance()->readEntry( mConfigurationName, QStringLiteral( "/OutlineColor" ), QStringLiteral( "#FFFFFF" ) ) );
   mMarginHorizontal = QgsProject::instance()->readNumEntry( mConfigurationName, QStringLiteral( "/MarginH" ), 0 );
   mMarginVertical = QgsProject::instance()->readNumEntry( mConfigurationName, QStringLiteral( "/MarginV" ), 0 );
 
@@ -121,8 +121,8 @@ void QgsDecorationScaleBar::saveToProject()
   QgsProject::instance()->writeEntry( mConfigurationName, QStringLiteral( "/PreferredSize" ), mPreferredSize );
   QgsProject::instance()->writeEntry( mConfigurationName, QStringLiteral( "/Snapping" ), mSnapping );
   QgsProject::instance()->writeEntry( mConfigurationName, QStringLiteral( "/Style" ), mStyleIndex );
-  QgsProject::instance()->writeEntry( mConfigurationName, QStringLiteral( "/Color" ), QgsSymbolLayerUtils::encodeColor( mColor ) );
-  QgsProject::instance()->writeEntry( mConfigurationName, QStringLiteral( "/OutlineColor" ), QgsSymbolLayerUtils::encodeColor( mOutlineColor ) );
+  QgsProject::instance()->writeEntry( mConfigurationName, QStringLiteral( "/Color" ), QgsColorUtils::colorToString( mColor ) );
+  QgsProject::instance()->writeEntry( mConfigurationName, QStringLiteral( "/OutlineColor" ), QgsColorUtils::colorToString( mOutlineColor ) );
   QgsProject::instance()->writeEntry( mConfigurationName, QStringLiteral( "/MarginH" ), mMarginHorizontal );
   QgsProject::instance()->writeEntry( mConfigurationName, QStringLiteral( "/MarginV" ), mMarginVertical );
 
@@ -240,14 +240,9 @@ void QgsDecorationScaleBar::render( const QgsMapSettings &mapSettings, QgsRender
 
   //Get canvas dimensions
   QPaintDevice *device = context.painter()->device();
-  const int deviceHeight = device->height() / device->devicePixelRatioF();
-  const int deviceWidth = device->width() / device->devicePixelRatioF();
-  const QgsSettings settings;
-  bool ok = false;
-  Qgis::DistanceUnit preferredUnits = QgsUnitTypes::decodeDistanceUnit( settings.value( QStringLiteral( "qgis/measure/displayunits" ) ).toString(), &ok );
-  if ( !ok )
-    preferredUnits = Qgis::DistanceUnit::Meters;
-
+  const float deviceHeight = static_cast<float>( device->height() ) / context.devicePixelRatio();
+  const float deviceWidth = static_cast<float>( device->width() ) / context.devicePixelRatio();
+  const Qgis::DistanceUnit preferredUnits = QgsProject::instance()->distanceUnits();
   Qgis::DistanceUnit scaleBarUnits = mapSettings.mapUnits();
 
   //Get map units per pixel

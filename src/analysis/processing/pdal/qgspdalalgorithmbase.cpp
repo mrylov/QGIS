@@ -58,11 +58,11 @@ QString QgsPdalAlgorithmBase::wrenchExecutableBinary() const
 void QgsPdalAlgorithmBase::createCommonParameters()
 {
   std::unique_ptr< QgsProcessingParameterExpression > filterParam = std::make_unique< QgsProcessingParameterExpression >( QStringLiteral( "FILTER_EXPRESSION" ), QObject::tr( "Filter expression" ), QVariant(), QStringLiteral( "INPUT" ), true, Qgis::ExpressionType::PointCloud );
-  filterParam->setFlags( filterParam->flags() | QgsProcessingParameterDefinition::FlagAdvanced );
+  filterParam->setFlags( filterParam->flags() | Qgis::ProcessingParameterFlag::Advanced );
   addParameter( filterParam.release() );
 
   std::unique_ptr< QgsProcessingParameterExtent > extentParam = std::make_unique< QgsProcessingParameterExtent >( QStringLiteral( "FILTER_EXTENT" ), QObject::tr( "Cropping extent" ), QVariant(), true );
-  extentParam->setFlags( extentParam->flags() | QgsProcessingParameterDefinition::FlagAdvanced );
+  extentParam->setFlags( extentParam->flags() | Qgis::ProcessingParameterFlag::Advanced );
   addParameter( extentParam.release() );
 }
 
@@ -130,6 +130,22 @@ QString QgsPdalAlgorithmBase::fixOutputFileName( const QString &inputFileName, c
   return outputFileName;
 }
 
+void QgsPdalAlgorithmBase::checkOutputFormat( const QString &inputFileName, const QString &outputFileName )
+{
+  if ( outputFileName.endsWith( QStringLiteral( ".copc.laz" ), Qt::CaseInsensitive ) )
+    throw QgsProcessingException(
+      QObject::tr( "This algorithm does not support output to COPC. Please use LAS or LAZ as the output format. "
+                   "LAS/LAZ files get automatically converted to COPC when loaded in QGIS, alternatively you can use "
+                   "\"Create COPC\" algorithm." ) );
+
+  bool inputIsVpc = inputFileName.endsWith( QStringLiteral( ".vpc" ), Qt::CaseInsensitive );
+  bool outputIsVpc = outputFileName.endsWith( QStringLiteral( ".vpc" ), Qt::CaseInsensitive );
+  if ( !inputIsVpc && outputIsVpc )
+    throw QgsProcessingException(
+      QObject::tr( "This algorithm does not support output to VPC if input is not a VPC. Please use LAS or LAZ as the output format. "
+                   "To create a VPC please use \"Build virtual point cloud (VPC)\" algorithm." ) );
+}
+
 QStringList QgsPdalAlgorithmBase::createArgumentLists( const QVariantMap &parameters, QgsProcessingContext &context, QgsProcessingFeedback *feedback )
 {
   Q_UNUSED( parameters );
@@ -147,6 +163,7 @@ class EnableElevationPropertiesPostProcessor : public QgsProcessingLayerPostProc
       if ( QgsRasterLayer *rl = qobject_cast< QgsRasterLayer * >( layer ) )
       {
         QgsRasterLayerElevationProperties *props = qgis::down_cast< QgsRasterLayerElevationProperties * >( rl->elevationProperties() );
+        props->setMode( Qgis::RasterElevationMode::RepresentsElevationSurface );
         props->setEnabled( true );
         rl->trigger3DUpdate();
       }

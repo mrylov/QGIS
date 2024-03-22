@@ -27,6 +27,8 @@
 #include "qgslinestring.h"
 #include "qgsmessagelog.h"
 #include "qgslabelingresults.h"
+#include "qgssettingsentryimpl.h"
+#include "qgssettingstree.h"
 
 #include <QImageWriter>
 #include <QSize>
@@ -143,6 +145,10 @@ class LayoutItemHider
 };
 
 ///@endcond PRIVATE
+
+const QgsSettingsEntryBool *QgsLayoutExporter::settingOpenAfterExportingImage = new QgsSettingsEntryBool( QStringLiteral( "open-after-exporting-image" ), QgsSettingsTree::sTreeLayout, false, QObject::tr( "Whether to open the exported image file with the default viewer after exporting a print layout" ) );
+const QgsSettingsEntryBool *QgsLayoutExporter::settingOpenAfterExportingPdf = new QgsSettingsEntryBool( QStringLiteral( "open-after-exporting-pdf" ), QgsSettingsTree::sTreeLayout, false, QObject::tr( "Whether to open the exported PDF file with the default viewer after exporting a print layout" ) );
+const QgsSettingsEntryBool *QgsLayoutExporter::settingOpenAfterExportingSvg = new QgsSettingsEntryBool( QStringLiteral( "open-after-exporting-svg" ), QgsSettingsTree::sTreeLayout, false, QObject::tr( "Whether to open the exported SVG file with the default viewer after exporting a print layout" ) );
 
 QgsLayoutExporter::QgsLayoutExporter( QgsLayout *layout )
   : mLayout( layout )
@@ -558,6 +564,11 @@ QgsLayoutExporter::ExportResult QgsLayoutExporter::exportToPdf( const QString &f
   // in items missing from the output
   mLayout->renderContext().setFlag( QgsLayoutRenderContext::FlagUseAdvancedEffects, !settings.forceVectorOutput );
   mLayout->renderContext().setFlag( QgsLayoutRenderContext::FlagForceVectorOutput, settings.forceVectorOutput );
+
+  // Force synchronous legend graphics requests. Necessary for WMS GetPrint,
+  // as otherwise processing the request ends before remote graphics are downloaded.
+  mLayout->renderContext().setFlag( QgsLayoutRenderContext::FlagSynchronousLegendGraphics, true );
+
   mLayout->renderContext().setTextRenderFormat( settings.textRenderFormat );
   mLayout->renderContext().setExportThemes( settings.exportThemes );
 
@@ -857,7 +868,7 @@ QgsLayoutExporter::ExportResult QgsLayoutExporter::exportToPdfs( QgsAbstractLayo
   return Success;
 }
 
-#ifndef QT_NO_PRINTER
+#if defined( HAVE_QTPRINTER )
 QgsLayoutExporter::ExportResult QgsLayoutExporter::print( QPrinter &printer, const QgsLayoutExporter::PrintExportSettings &s )
 {
   if ( !mLayout )
@@ -977,7 +988,7 @@ QgsLayoutExporter::ExportResult QgsLayoutExporter::print( QgsAbstractLayoutItera
   iterator->endRender();
   return Success;
 }
-#endif // QT_NO_PRINTER
+#endif // HAVE_QTPRINTER
 
 QgsLayoutExporter::ExportResult QgsLayoutExporter::exportToSvg( const QString &filePath, const QgsLayoutExporter::SvgExportSettings &s )
 {
@@ -1244,7 +1255,7 @@ void QgsLayoutExporter::preparePrint( QgsLayout *layout, QPagedPaintDevice *devi
   {
     pdf->setResolution( static_cast< int>( std::round( layout->renderContext().dpi() ) ) );
   }
-#ifndef QT_NO_PRINTER
+#if defined( HAVE_QTPRINTER )
   else if ( QPrinter *printer = dynamic_cast<QPrinter *>( device ) )
   {
     printer->setFullPage( true );
@@ -1284,7 +1295,7 @@ QgsLayoutExporter::ExportResult QgsLayoutExporter::printPrivate( QPagedPaintDevi
   int fromPage = 0;
   int toPage = mLayout->pageCollection()->pageCount() - 1;
 
-#ifndef QT_NO_PRINTER
+#if defined( HAVE_QTPRINTER )
   if ( QPrinter *printer = dynamic_cast<QPrinter *>( device ) )
   {
     if ( printer->fromPage() >= 1 )
@@ -1357,7 +1368,7 @@ void QgsLayoutExporter::updatePrinterPageSize( QgsLayout *layout, QPagedPaintDev
   device->setPageLayout( pageLayout );
   device->setPageMargins( QMarginsF( 0, 0, 0, 0 ) );
 
-#ifndef QT_NO_PRINTER
+#if defined( HAVE_QTPRINTER )
   if ( QPrinter *printer = dynamic_cast<QPrinter *>( device ) )
   {
     printer->setFullPage( true );
@@ -1683,7 +1694,7 @@ bool QgsLayoutExporter::georeferenceOutputPrivate( const QString &file, QgsLayou
     }
 
     if ( t )
-      GDALSetProjection( outputDS.get(), map->crs().toWkt( QgsCoordinateReferenceSystem::WKT_PREFERRED_GDAL ).toLocal8Bit().constData() );
+      GDALSetProjection( outputDS.get(), map->crs().toWkt( Qgis::CrsWktVariant::PreferredGdal ).toLocal8Bit().constData() );
   }
   CPLSetConfigOption( "GDAL_PDF_DPI", nullptr );
 

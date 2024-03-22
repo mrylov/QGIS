@@ -332,7 +332,7 @@ QgsRectangle QgsHanaProvider::extent() const
 
 void QgsHanaProvider::updateExtents()
 {
-  mLayerExtent.setMinimal();
+  mLayerExtent.setNull();
 }
 
 Qgis::WkbType QgsHanaProvider::wkbType() const
@@ -477,7 +477,7 @@ bool QgsHanaProvider::setSubsetString( const QString &subset, bool )
   QgsDataSourceUri anUri = QgsDataSourceUri( dataSourceUri() );
   anUri.setSql( mQueryWhereClause );
   setDataSourceUri( anUri.uri() );
-  mLayerExtent.setMinimal();
+  mLayerExtent.setNull();
   mFeaturesCount = -1;
 
   emit dataChanged();

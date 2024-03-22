@@ -11,8 +11,7 @@ __author__ = '(C) 2020 by Nyall Dawson'
 __date__ = '10/08/2020'
 __copyright__ = 'Copyright 2020, The QGIS Project'
 
-import qgis  # NOQA
-from qgis.PyQt.QtCore import QDir, QSize, Qt
+from qgis.PyQt.QtCore import QSize
 from qgis.PyQt.QtGui import QColor, QImage, QPainter
 from qgis.PyQt.QtXml import QDomDocument
 from qgis.core import (
@@ -31,14 +30,14 @@ from qgis.core import (
     QgsProject,
     QgsReadWriteContext,
     QgsRectangle,
-    QgsMultiRenderChecker,
     QgsRenderContext,
     QgsTextFormat,
     QgsVertexId,
     QgsLineString,
     QgsMapUnitScale,
 )
-from qgis.testing import start_app, unittest
+import unittest
+from qgis.testing import start_app, QgisTestCase
 
 from utilities import getTestFont, unitTestDataPath
 
@@ -46,19 +45,11 @@ start_app()
 TEST_DATA_DIR = unitTestDataPath()
 
 
-class TestQgsAnnotationLineTextItem(unittest.TestCase):
+class TestQgsAnnotationLineTextItem(QgisTestCase):
 
     @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        cls.report = "<h1>Python QgsAnnotationLineTextItem Tests</h1>\n"
-
-    @classmethod
-    def tearDownClass(cls):
-        report_file_path = f"{QDir.tempPath()}/qgistest.html"
-        with open(report_file_path, 'a') as report_file:
-            report_file.write(cls.report)
-        super().tearDownClass()
+    def control_path_prefix(cls):
+        return "annotation_layer"
 
     def testBasic(self):
         item = QgsAnnotationLineTextItem('my text', QgsLineString(((12, 13), (13, 13.1), (14, 13))))
@@ -225,11 +216,11 @@ class TestQgsAnnotationLineTextItem(unittest.TestCase):
         settings.setExtent(QgsRectangle(11.9, 11.9, 14.5, 14))
         settings.setOutputSize(QSize(600, 300))
 
-        settings.setFlag(QgsMapSettings.Antialiasing, False)
+        settings.setFlag(QgsMapSettings.Flag.Antialiasing, False)
 
         rc = QgsRenderContext.fromMapSettings(settings)
         rc.setScaleFactor(96 / 25.4)  # 96 DPI
-        image = QImage(600, 300, QImage.Format_ARGB32)
+        image = QImage(600, 300, QImage.Format.Format_ARGB32)
         image.setDotsPerMeterX(int(96 / 25.4 * 1000))
         image.setDotsPerMeterY(int(96 / 25.4 * 1000))
         image.fill(QColor(255, 255, 255))
@@ -241,7 +232,7 @@ class TestQgsAnnotationLineTextItem(unittest.TestCase):
         finally:
             painter.end()
 
-        self.assertTrue(self.imageCheck('linetext_item', 'linetext_item', image))
+        self.assertTrue(self.image_check('linetext_item', 'linetext_item', image))
 
     def testRenderLineOffsetPositive(self):
         item = QgsAnnotationLineTextItem('my text', QgsLineString(((12, 13), (13, 13.1), (14, 12))))
@@ -259,11 +250,11 @@ class TestQgsAnnotationLineTextItem(unittest.TestCase):
         settings.setExtent(QgsRectangle(11.9, 11.9, 14.5, 14))
         settings.setOutputSize(QSize(600, 300))
 
-        settings.setFlag(QgsMapSettings.Antialiasing, False)
+        settings.setFlag(QgsMapSettings.Flag.Antialiasing, False)
 
         rc = QgsRenderContext.fromMapSettings(settings)
         rc.setScaleFactor(96 / 25.4)  # 96 DPI
-        image = QImage(600, 300, QImage.Format_ARGB32)
+        image = QImage(600, 300, QImage.Format.Format_ARGB32)
         image.setDotsPerMeterX(int(96 / 25.4 * 1000))
         image.setDotsPerMeterY(int(96 / 25.4 * 1000))
         image.fill(QColor(255, 255, 255))
@@ -275,7 +266,7 @@ class TestQgsAnnotationLineTextItem(unittest.TestCase):
         finally:
             painter.end()
 
-        self.assertTrue(self.imageCheck('linetext_item_offset_positive', 'linetext_item_offset_positive', image))
+        self.assertTrue(self.image_check('linetext_item_offset_positive', 'linetext_item_offset_positive', image))
 
     def testRenderLineOffsetNegative(self):
         item = QgsAnnotationLineTextItem('my text', QgsLineString(((12, 13), (13, 13.1), (14, 12))))
@@ -293,11 +284,11 @@ class TestQgsAnnotationLineTextItem(unittest.TestCase):
         settings.setExtent(QgsRectangle(11.9, 11.9, 14.5, 14))
         settings.setOutputSize(QSize(600, 300))
 
-        settings.setFlag(QgsMapSettings.Antialiasing, False)
+        settings.setFlag(QgsMapSettings.Flag.Antialiasing, False)
 
         rc = QgsRenderContext.fromMapSettings(settings)
         rc.setScaleFactor(96 / 25.4)  # 96 DPI
-        image = QImage(600, 300, QImage.Format_ARGB32)
+        image = QImage(600, 300, QImage.Format.Format_ARGB32)
         image.setDotsPerMeterX(int(96 / 25.4 * 1000))
         image.setDotsPerMeterY(int(96 / 25.4 * 1000))
         image.fill(QColor(255, 255, 255))
@@ -309,7 +300,7 @@ class TestQgsAnnotationLineTextItem(unittest.TestCase):
         finally:
             painter.end()
 
-        self.assertTrue(self.imageCheck('linetext_item_offset_negative', 'linetext_item_offset_negative', image))
+        self.assertTrue(self.image_check('linetext_item_offset_negative', 'linetext_item_offset_negative', image))
 
     def testRenderLineTruncate(self):
         item = QgsAnnotationLineTextItem('my text', QgsLineString(((12, 13), (13, 13.1), (14, 12))))
@@ -325,11 +316,11 @@ class TestQgsAnnotationLineTextItem(unittest.TestCase):
         settings.setExtent(QgsRectangle(11.9, 11.9, 14.5, 14))
         settings.setOutputSize(QSize(600, 300))
 
-        settings.setFlag(QgsMapSettings.Antialiasing, False)
+        settings.setFlag(QgsMapSettings.Flag.Antialiasing, False)
 
         rc = QgsRenderContext.fromMapSettings(settings)
         rc.setScaleFactor(96 / 25.4)  # 96 DPI
-        image = QImage(600, 300, QImage.Format_ARGB32)
+        image = QImage(600, 300, QImage.Format.Format_ARGB32)
         image.setDotsPerMeterX(int(96 / 25.4 * 1000))
         image.setDotsPerMeterY(int(96 / 25.4 * 1000))
         image.fill(QColor(255, 255, 255))
@@ -341,7 +332,7 @@ class TestQgsAnnotationLineTextItem(unittest.TestCase):
         finally:
             painter.end()
 
-        self.assertTrue(self.imageCheck('linetext_item_truncate', 'linetext_item_truncate', image))
+        self.assertTrue(self.image_check('linetext_item_truncate', 'linetext_item_truncate', image))
 
     def testRenderLineTextExpression(self):
         item = QgsAnnotationLineTextItem('[% 1 + 1.5 %]', QgsLineString(((12, 13), (13, 13.1), (14, 12))))
@@ -357,11 +348,11 @@ class TestQgsAnnotationLineTextItem(unittest.TestCase):
         settings.setExtent(QgsRectangle(11.9, 11.9, 14.5, 14))
         settings.setOutputSize(QSize(600, 300))
 
-        settings.setFlag(QgsMapSettings.Antialiasing, False)
+        settings.setFlag(QgsMapSettings.Flag.Antialiasing, False)
 
         rc = QgsRenderContext.fromMapSettings(settings)
         rc.setScaleFactor(96 / 25.4)  # 96 DPI
-        image = QImage(600, 300, QImage.Format_ARGB32)
+        image = QImage(600, 300, QImage.Format.Format_ARGB32)
         image.setDotsPerMeterX(int(96 / 25.4 * 1000))
         image.setDotsPerMeterY(int(96 / 25.4 * 1000))
         image.fill(QColor(255, 255, 255))
@@ -373,7 +364,7 @@ class TestQgsAnnotationLineTextItem(unittest.TestCase):
         finally:
             painter.end()
 
-        self.assertTrue(self.imageCheck('linetext_item_expression', 'linetext_item_expression', image))
+        self.assertTrue(self.image_check('linetext_item_expression', 'linetext_item_expression', image))
 
     def testRenderWithTransform(self):
         item = QgsAnnotationLineTextItem('my text', QgsLineString(
@@ -390,12 +381,12 @@ class TestQgsAnnotationLineTextItem(unittest.TestCase):
         settings.setExtent(QgsRectangle(1291958, 1386945, 1420709, 1532518))
         settings.setOutputSize(QSize(600, 300))
 
-        settings.setFlag(QgsMapSettings.Antialiasing, False)
+        settings.setFlag(QgsMapSettings.Flag.Antialiasing, False)
 
         rc = QgsRenderContext.fromMapSettings(settings)
         rc.setScaleFactor(96 / 25.4)  # 96 DPI
         rc.setCoordinateTransform(QgsCoordinateTransform(QgsCoordinateReferenceSystem('EPSG:4326'), settings.destinationCrs(), QgsProject.instance()))
-        image = QImage(600, 300, QImage.Format_ARGB32)
+        image = QImage(600, 300, QImage.Format.Format_ARGB32)
         image.setDotsPerMeterX(int(96 / 25.4 * 1000))
         image.setDotsPerMeterY(int(96 / 25.4 * 1000))
         image.fill(QColor(255, 255, 255))
@@ -407,21 +398,7 @@ class TestQgsAnnotationLineTextItem(unittest.TestCase):
         finally:
             painter.end()
 
-        self.assertTrue(self.imageCheck('linetext_item_transform', 'linetext_item_transform', image))
-
-    def imageCheck(self, name, reference_image, image):
-        TestQgsAnnotationLineTextItem.report += f"<h2>Render {name}</h2>\n"
-        temp_dir = QDir.tempPath() + '/'
-        file_name = temp_dir + 'annotation_' + name + ".png"
-        image.save(file_name, "PNG")
-        checker = QgsMultiRenderChecker()
-        checker.setControlPathPrefix("annotation_layer")
-        checker.setControlName("expected_" + reference_image)
-        checker.setRenderedImage(file_name)
-        checker.setColorTolerance(2)
-        result = checker.runTest(name, 20)
-        TestQgsAnnotationLineTextItem.report += checker.report()
-        return result
+        self.assertTrue(self.image_check('linetext_item_transform', 'linetext_item_transform', image))
 
 
 if __name__ == '__main__':

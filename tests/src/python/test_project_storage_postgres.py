@@ -17,13 +17,13 @@ __copyright__ = 'Copyright 2018, The QGIS Project'
 import os
 
 import psycopg2
-import qgis  # NOQA
-from PyQt5.QtCore import QUrl, QUrlQuery
+from qgis.PyQt.QtCore import QUrl, QUrlQuery
 from qgis.core import (
     QgsDataSourceUri,
     QgsVectorLayer,
 )
-from qgis.testing import start_app, unittest
+import unittest
+from qgis.testing import start_app, QgisTestCase
 
 from test_project_storage_base import TestPyQgsProjectStorageBase
 from utilities import unitTestDataPath
@@ -32,7 +32,7 @@ QGISAPP = start_app()
 TEST_DATA_DIR = unitTestDataPath()
 
 
-class TestPyQgsProjectStoragePostgres(unittest.TestCase, TestPyQgsProjectStorageBase):
+class TestPyQgsProjectStoragePostgres(QgisTestCase, TestPyQgsProjectStorageBase):
 
     @classmethod
     def setUpClass(cls):
@@ -82,7 +82,7 @@ class TestPyQgsProjectStoragePostgres(unittest.TestCase, TestPyQgsProjectStorage
             urlQuery.addQueryItem("service", ds_uri.service())
         if ds_uri.authConfigId() != '':
             urlQuery.addQueryItem("authcfg", ds_uri.authConfigId())
-        if ds_uri.sslMode() != QgsDataSourceUri.SslPrefer:
+        if ds_uri.sslMode() != QgsDataSourceUri.SslMode.SslPrefer:
             urlQuery.addQueryItem("sslmode", QgsDataSourceUri.encodeSslMode(ds_uri.sslMode()))
 
         urlQuery.addQueryItem("dbname", ds_uri.database())

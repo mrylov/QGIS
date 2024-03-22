@@ -9,7 +9,6 @@ __author__ = 'Nyall Dawson'
 __date__ = '16/03/2020'
 __copyright__ = 'Copyright 2020, The QGIS Project'
 
-import qgis  # NOQA
 from qgis.core import (
     Qgis,
     QgsMapLayerType,
@@ -18,7 +17,8 @@ from qgis.core import (
     QgsProviderSublayerDetails,
     QgsProviderUtils,
 )
-from qgis.testing import start_app, unittest
+import unittest
+from qgis.testing import start_app, QgisTestCase
 
 from utilities import unitTestDataPath
 
@@ -43,17 +43,17 @@ class TestProviderMetadata(QgsProviderMetadata):
         return [res]
 
 
-class TestProviderTiledMeshMetadata(QgsProviderMetadata):
+class TestProviderTiledSceneMetadata(QgsProviderMetadata):
 
     def __init__(self, key):
         super().__init__(key, key)
 
     def filters(self, _type: Qgis.FileFilterType):
-        if _type == Qgis.FileFilterType.TiledMesh:
+        if _type == Qgis.FileFilterType.TiledScene:
             return "Scene Layer Packages (*.slpk *.SLPK)"
 
 
-class TestQgsProviderRegistry(unittest.TestCase):
+class TestQgsProviderRegistry(QgisTestCase):
 
     def testProviderList(self):
         """
@@ -101,7 +101,7 @@ class TestQgsProviderRegistry(unittest.TestCase):
         """
         providers = QgsProviderRegistry.instance().providerList()
         for p in providers:
-            if p in ('vectortile', 'arcgisvectortileservice', 'tiledmesh'):
+            if p in ('vectortile', 'arcgisvectortileservice', 'tiledscene'):
                 continue
 
             self.assertTrue(QgsProviderRegistry.instance().createProvider(p, ''))
@@ -191,19 +191,19 @@ class TestQgsProviderRegistry(unittest.TestCase):
         self.assertCountEqual([p.providerKey() for p in QgsProviderRegistry.instance().querySublayers('test_uri')],
                               ['p1', 'p2'])
 
-    def test_tiled_mesh_file_filters(self):
+    def test_tiled_scene_file_filters(self):
         """
-        Test fileTiledMeshFilters()
+        Test fileTiledSceneFilters()
         """
         registry = QgsProviderRegistry.instance()
-        self.assertEqual(registry.fileTiledMeshFilters(),
+        self.assertEqual(registry.fileTiledSceneFilters(),
                          'All Supported Files (tileset.json TILESET.JSON);;'
                          'All Files (*.*);;'
                          'Cesium 3D Tiles (tileset.json TILESET.JSON)')
 
-        registry.registerProvider(TestProviderTiledMeshMetadata('slpk'))
+        registry.registerProvider(TestProviderTiledSceneMetadata('slpk'))
         self.assertEqual(
-            registry.fileTiledMeshFilters(),
+            registry.fileTiledSceneFilters(),
             'All Supported Files (tileset.json TILESET.JSON *.slpk *.SLPK);;'
             'All Files (*.*);;'
             'Cesium 3D Tiles (tileset.json TILESET.JSON);;'

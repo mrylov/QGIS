@@ -59,7 +59,7 @@
 #include <QToolBar>
 #include <QProgressBar>
 #include <QTimer>
-#include <QPrinter>
+#include <QPdfWriter>
 #include <QSplitter>
 #include <QShortcut>
 #include <QActionGroup>
@@ -69,6 +69,7 @@ const QgsSettingsEntryDouble *QgsElevationProfileWidget::settingTolerance = new 
 const QgsSettingsEntryBool *QgsElevationProfileWidget::settingShowLayerTree = new QgsSettingsEntryBool( QStringLiteral( "show-layer-tree" ), QgsSettingsTree::sTreeElevationProfile, true, QStringLiteral( "Whether the layer tree should be shown for elevation profile plots" ) );
 const QgsSettingsEntryBool *QgsElevationProfileWidget::settingLockAxis = new QgsSettingsEntryBool( QStringLiteral( "lock-axis-ratio" ), QgsSettingsTree::sTreeElevationProfile, false, QStringLiteral( "Whether the the distance and elevation axis scales are locked to each other" ) );
 const QgsSettingsEntryString *QgsElevationProfileWidget::settingLastExportDir = new QgsSettingsEntryString( QStringLiteral( "last-export-dir" ), QgsSettingsTree::sTreeElevationProfile, QString(), QStringLiteral( "Last elevation profile export directory" ) );
+const QgsSettingsEntryColor *QgsElevationProfileWidget::settingBackgroundColor = new QgsSettingsEntryColor( QStringLiteral( "background-color" ), QgsSettingsTree::sTreeElevationProfile, QColor(), QStringLiteral( "Elevation profile chart background color" ) );
 //
 // QgsElevationProfileLayersDialog
 //
@@ -157,6 +158,12 @@ QgsElevationProfileWidget::QgsElevationProfileWidget( const QString &name )
   connect( mCanvas, &QgsElevationProfileCanvas::canvasPointHovered, this, &QgsElevationProfileWidget::onCanvasPointHovered );
 
   mCanvas->setLockAxisScales( settingLockAxis->value() );
+
+  mCanvas->setBackgroundColor( settingBackgroundColor->value() );
+  connect( QgsGui::instance(), &QgsGui::optionsChanged, this, [ = ]
+  {
+    mCanvas->setBackgroundColor( settingBackgroundColor->value() );
+  } );
 
   mPanTool = new QgsPlotToolPan( mCanvas );
 
@@ -748,24 +755,19 @@ void QgsElevationProfileWidget::exportAsPdf()
   if ( !dialog.exec() )
     return;
 
-  QPrinter printer;
-  printer.setOutputFileName( outputFileName );
-  printer.setOutputFormat( QPrinter::PdfFormat );
+  QPdfWriter pdfWriter( outputFileName );
 
   const QgsLayoutSize pageSizeMM = dialog.pageSizeMM();
   QPageLayout pageLayout( QPageSize( pageSizeMM.toQSizeF(), QPageSize::Millimeter ),
                           QPageLayout::Portrait,
                           QMarginsF( 0, 0, 0, 0 ) );
   pageLayout.setMode( QPageLayout::FullPageMode );
-  printer.setPageLayout( pageLayout );
-  printer.setFullPage( true );
-  printer.setPageMargins( QMarginsF( 0, 0, 0, 0 ) );
-  printer.setFullPage( true );
-  printer.setColorMode( QPrinter::Color );
-  printer.setResolution( 300 );
+  pdfWriter.setPageLayout( pageLayout );
+  pdfWriter.setPageMargins( QMarginsF( 0, 0, 0, 0 ) );
+  pdfWriter.setResolution( 300 );
 
   QPainter p;
-  if ( !p.begin( &printer ) )
+  if ( !p.begin( &pdfWriter ) )
   {
     //error beginning print
     QgisApp::instance()->messageBar()->pushWarning( tr( "Save as PDF" ), tr( "Could not create %1" ).arg( QDir::toNativeSeparators( outputFileName ) ) );

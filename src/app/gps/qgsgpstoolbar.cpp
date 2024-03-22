@@ -91,7 +91,7 @@ QgsGpsToolBar::QgsGpsToolBar( QgsAppGpsConnection *connection, QgsMapCanvas *can
 
   mDestinationLayerModel = new QgsMapLayerProxyModel( this );
   mDestinationLayerModel->setProject( QgsProject::instance() );
-  mDestinationLayerModel->setFilters( QgsMapLayerProxyModel::Filter::HasGeometry | QgsMapLayerProxyModel::Filter::WritableLayer );
+  mDestinationLayerModel->setFilters( Qgis::LayerFilter::HasGeometry | Qgis::LayerFilter::WritableLayer );
 
   mDestinationLayerMenu = new QMenu( this );
   connect( mDestinationLayerMenu, &QMenu::aboutToShow, this, &QgsGpsToolBar::destinationMenuAboutToShow );
@@ -431,7 +431,7 @@ void QgsGpsToolBar::destinationMenuAboutToShow()
     layerAction->setIcon( index.data( Qt::DecorationRole ).value< QIcon >() );
     layerAction->setCheckable( true );
 
-    const QString actionLayerId = index.data( QgsMapLayerModel::ItemDataRole::LayerIdRole ).toString();
+    const QString actionLayerId = index.data( static_cast< int >( QgsMapLayerModel::CustomRole::LayerId ) ).toString();
 
     if ( actionLayerId == currentLayerId && !QgsProject::instance()->gpsSettings()->destinationFollowsActiveLayer() )
       layerAction->setChecked( true );

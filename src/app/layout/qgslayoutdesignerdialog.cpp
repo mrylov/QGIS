@@ -87,9 +87,6 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QProgressDialog>
-#include <QPrinter>
-#include <QPrintDialog>
-#include <QPageSetupDialog>
 #include <QWidgetAction>
 #include <QProgressBar>
 #include <QClipboard>
@@ -98,6 +95,13 @@
 #include <QWindow>
 #include <QScreen>
 #include <QActionGroup>
+#include <QDesktopServices>
+
+#if defined( HAVE_QTPRINTER )
+#include <QPageSetupDialog>
+#include <QPrinter>
+#include <QPrintDialog>
+#endif
 
 #ifdef Q_OS_MACX
 #include <ApplicationServices/ApplicationServices.h>
@@ -375,7 +379,6 @@ QgsLayoutDesignerDialog::QgsLayoutDesignerDialog( QWidget *parent, Qt::WindowFla
   connect( mActionLayoutManager, &QAction::triggered, this, &QgsLayoutDesignerDialog::showManager );
   connect( mActionRemoveLayout, &QAction::triggered, this, &QgsLayoutDesignerDialog::deleteLayout );
 
-  connect( mActionPrint, &QAction::triggered, this, &QgsLayoutDesignerDialog::print );
   connect( mActionExportAsImage, &QAction::triggered, this, &QgsLayoutDesignerDialog::exportToRaster );
   connect( mActionExportAsPDF, &QAction::triggered, this, &QgsLayoutDesignerDialog::exportToPdf );
   connect( mActionExportAsSVG, &QAction::triggered, this, &QgsLayoutDesignerDialog::exportToSvg );
@@ -396,17 +399,24 @@ QgsLayoutDesignerDialog::QgsLayoutDesignerDialog( QWidget *parent, Qt::WindowFla
   connect( mActionAtlasPrev, &QAction::triggered, this, &QgsLayoutDesignerDialog::atlasPrevious );
   connect( mActionAtlasFirst, &QAction::triggered, this, &QgsLayoutDesignerDialog::atlasFirst );
   connect( mActionAtlasLast, &QAction::triggered, this, &QgsLayoutDesignerDialog::atlasLast );
-  connect( mActionPrintAtlas, &QAction::triggered, this, &QgsLayoutDesignerDialog::printAtlas );
   connect( mActionExportAtlasAsImage, &QAction::triggered, this, &QgsLayoutDesignerDialog::exportAtlasToRaster );
   connect( mActionExportAtlasAsSVG, &QAction::triggered, this, &QgsLayoutDesignerDialog::exportAtlasToSvg );
   connect( mActionExportAtlasAsPDF, &QAction::triggered, this, &QgsLayoutDesignerDialog::exportAtlasToPdf );
-
   connect( mActionExportReportAsImage, &QAction::triggered, this, &QgsLayoutDesignerDialog::exportReportToRaster );
   connect( mActionExportReportAsSVG, &QAction::triggered, this, &QgsLayoutDesignerDialog::exportReportToSvg );
   connect( mActionExportReportAsPDF, &QAction::triggered, this, &QgsLayoutDesignerDialog::exportReportToPdf );
-  connect( mActionPrintReport, &QAction::triggered, this, &QgsLayoutDesignerDialog::printReport );
 
+#if defined( HAVE_QTPRINTER )
+  connect( mActionPrint, &QAction::triggered, this, &QgsLayoutDesignerDialog::print );
+  connect( mActionPrintAtlas, &QAction::triggered, this, &QgsLayoutDesignerDialog::printAtlas );
+  connect( mActionPrintReport, &QAction::triggered, this, &QgsLayoutDesignerDialog::printReport );
   connect( mActionPageSetup, &QAction::triggered, this, &QgsLayoutDesignerDialog::pageSetup );
+#else
+  mActionPrintAtlas->setVisible( false );
+  mActionPrintReport->setVisible( false );
+  mActionPrint->setVisible( false );
+  mActionPageSetup->setVisible( false );
+#endif
 
   connect( mActionOptions, &QAction::triggered, this, [ = ]
   {
@@ -1337,7 +1347,8 @@ void QgsLayoutDesignerDialog::showItemOptions( QgsLayoutItem *item, bool bringPa
 
   if ( auto widget = qobject_cast< QgsLayoutItemBaseWidget * >( mItemPropertiesStack->mainPanel() ) )
   {
-    if ( widget->layoutObject() == item )
+    const QgsLayoutObject *currentItem = widget->layoutObject();
+    if ( currentItem == item )
     {
       // already showing properties for this item - we don't want to create a new panel
       if ( bringPanelToFront )
@@ -1352,6 +1363,9 @@ void QgsLayoutDesignerDialog::showItemOptions( QgsLayoutItem *item, bool bringPa
       {
         if ( bringPanelToFront )
           mItemDock->setUserVisible( true );
+
+        disconnect( currentItem, &QgsLayoutItem::destroyed, this, &QgsLayoutDesignerDialog::onItemDestroyed );
+        connect( item, &QgsLayoutItem::destroyed, this, &QgsLayoutDesignerDialog::onItemDestroyed );
 
         return;
       }
@@ -1372,10 +1386,7 @@ void QgsLayoutDesignerDialog::showItemOptions( QgsLayoutItem *item, bool bringPa
     connect( ppWidget, &QgsLayoutPagePropertiesWidget::pageOrientationChanged, this, &QgsLayoutDesignerDialog::pageOrientationChanged );
 
   widget->setDockMode( true );
-  connect( item, &QgsLayoutItem::destroyed, widget.get(), [this]
-  {
-    delete mItemPropertiesStack->takeMainPanel();
-  } );
+  connect( item, &QgsLayoutItem::destroyed, this, &QgsLayoutDesignerDialog::onItemDestroyed );
 
   mItemPropertiesStack->setMainPanel( widget.release() );
   if ( bringPanelToFront )
@@ -1389,7 +1400,15 @@ void QgsLayoutDesignerDialog::open()
   activate();
   if ( mView )
   {
-    mView->zoomFull(); // zoomFull() does not work properly until we have called show()
+    mView->setPaintingEnabled( false );
+    // zoomFull() does not work properly until window has fully shown.
+    // It's not enough to just call show on it, because the view widget won't be fully
+    // resized to its final size until a little later...!
+    QTimer::singleShot( 100, this, [ = ]
+    {
+      mView->zoomFull();
+      mView->setPaintingEnabled( true );
+    } );
   }
 
   if ( mMasterLayout && mMasterLayout->layoutType() == QgsMasterLayoutInterface::Report )
@@ -2099,6 +2118,7 @@ void QgsLayoutDesignerDialog::deleteLayout()
 
 void QgsLayoutDesignerDialog::print()
 {
+#if defined( HAVE_QTPRINTER )
   if ( !checkBeforeExport() )
     return;
 
@@ -2206,6 +2226,7 @@ void QgsLayoutDesignerDialog::print()
   }
 
   mView->setPaintingEnabled( true );
+#endif
 }
 
 void QgsLayoutDesignerDialog::exportToRaster()
@@ -2271,6 +2292,12 @@ void QgsLayoutDesignerDialog::exportToRaster()
       mMessageBar->pushMessage( tr( "Export layout" ),
                                 tr( "Successfully exported layout to <a href=\"%1\">%2</a>" ).arg( QUrl::fromLocalFile( fileNExt.first ).toString(), QDir::toNativeSeparators( fileNExt.first ) ),
                                 Qgis::MessageLevel::Success, 0 );
+
+      // Open exported file in the default viewer if enabled
+      if ( QgsLayoutExporter::settingOpenAfterExportingImage->value() )
+      {
+        QDesktopServices::openUrl( QUrl::fromLocalFile( fileNExt.first ) );
+      }
       break;
 
     case QgsLayoutExporter::PrintError:
@@ -2386,6 +2413,12 @@ void QgsLayoutDesignerDialog::exportToPdf()
       mMessageBar->pushMessage( tr( "Export layout" ),
                                 tr( "Successfully exported layout to <a href=\"%1\">%2</a>" ).arg( QUrl::fromLocalFile( outputFileName ).toString(), QDir::toNativeSeparators( outputFileName ) ),
                                 Qgis::MessageLevel::Success, 0 );
+
+      // Open exported file in the default viewer if enabled
+      if ( QgsLayoutExporter::settingOpenAfterExportingPdf->value() )
+      {
+        QDesktopServices::openUrl( QUrl::fromLocalFile( outputFileName ) );
+      }
       break;
     }
 
@@ -2498,6 +2531,12 @@ void QgsLayoutDesignerDialog::exportToSvg()
       mMessageBar->pushMessage( tr( "Export layout" ),
                                 tr( "Successfully exported layout to <a href=\"%1\">%2</a>" ).arg( QUrl::fromLocalFile( outputFileName ).toString(), QDir::toNativeSeparators( outputFileName ) ),
                                 Qgis::MessageLevel::Success, 0 );
+
+      // Open exported file in the default viewer if enabled
+      if ( QgsLayoutExporter::settingOpenAfterExportingSvg->value() )
+      {
+        QDesktopServices::openUrl( QUrl::fromLocalFile( outputFileName ) );
+      }
       break;
     }
 
@@ -2687,6 +2726,7 @@ void QgsLayoutDesignerDialog::atlasLast()
 
 void QgsLayoutDesignerDialog::printAtlas()
 {
+#if defined( HAVE_QTPRINTER )
   if ( !checkBeforeExport() )
     return;
 
@@ -2829,6 +2869,7 @@ void QgsLayoutDesignerDialog::printAtlas()
   }
 
   mView->setPaintingEnabled( true );
+#endif
 }
 
 void QgsLayoutDesignerDialog::exportAtlasToRaster()
@@ -3810,6 +3851,7 @@ void QgsLayoutDesignerDialog::exportReportToPdf()
 
 void QgsLayoutDesignerDialog::printReport()
 {
+#if defined( HAVE_QTPRINTER )
   if ( !checkBeforeExport() )
     return;
 
@@ -3928,10 +3970,12 @@ void QgsLayoutDesignerDialog::printReport()
   }
 
   mView->setPaintingEnabled( true );
+#endif
 }
 
 void QgsLayoutDesignerDialog::pageSetup()
 {
+#if defined( HAVE_QTPRINTER )
   if ( currentLayout() && currentLayout()->pageCollection()->pageCount() > 0 )
   {
     // get orientation from first page
@@ -3942,6 +3986,7 @@ void QgsLayoutDesignerDialog::pageSetup()
 
   QPageSetupDialog pageSetupDialog( printer(), this );
   pageSetupDialog.exec();
+#endif
 }
 
 void QgsLayoutDesignerDialog::pageOrientationChanged()
@@ -4099,7 +4144,6 @@ void QgsLayoutDesignerDialog::createAtlasWidget()
   atlasWidget->setMessageBar( mMessageBar );
   mAtlasDock->setWidget( atlasWidget );
 
-  mAtlasToolbar->show();
   mPanelsMenu->addAction( mAtlasDock->toggleViewAction() );
 
   connect( atlas, &QgsLayoutAtlas::messagePushed, mStatusBar, [ = ]( const QString & message )
@@ -4294,6 +4338,7 @@ bool QgsLayoutDesignerDialog::getRasterExportSettings( QgsLayoutExporter::ImageE
   if ( mLayout )
     imageDlg.setGenerateWorldFile( mLayout->customProperty( QStringLiteral( "exportWorldFile" ), false ).toBool() );
   imageDlg.setAntialiasing( antialias );
+  imageDlg.setOpenAfterExporting( QgsLayoutExporter::settingOpenAfterExportingImage->value() );
 
   if ( !imageDlg.exec() )
     return false;
@@ -4301,6 +4346,8 @@ bool QgsLayoutDesignerDialog::getRasterExportSettings( QgsLayoutExporter::ImageE
   imageSize = QSize( imageDlg.imageWidth(), imageDlg.imageHeight() );
   cropToContents = imageDlg.cropToContents();
   imageDlg.getCropMargins( marginTop, marginRight, marginBottom, marginLeft );
+  QgsLayoutExporter::settingOpenAfterExportingImage->setValue( imageDlg.openAfterExporting() );
+
   if ( mLayout )
   {
     mLayout->setCustomProperty( QStringLiteral( "imageCropToContents" ), cropToContents );
@@ -4375,7 +4422,7 @@ bool QgsLayoutDesignerDialog::getSvgExportSettings( QgsLayoutExporter::SvgExport
   Ui::QgsSvgExportOptionsDialog options;
   options.setupUi( &dialog );
 
-  connect( options.buttonBox, &QDialogButtonBox::helpRequested, this, [ & ]
+  connect( options.mHelpButtonBox, &QDialogButtonBox::helpRequested, this, [ & ]
   {
     QgsHelp::openHelp( QStringLiteral( "print_composer/create_output.html" ) );
   }
@@ -4395,6 +4442,7 @@ bool QgsLayoutDesignerDialog::getSvgExportSettings( QgsLayoutExporter::SvgExport
   options.mIncludeMetadataCheckbox->setChecked( includeMetadata );
   options.mDisableRasterTilingCheckBox->setChecked( disableRasterTiles );
   options.mSimplifyGeometriesCheckbox->setChecked( simplify );
+  options.mOpenAfterExportingCheckBox->setChecked( QgsLayoutExporter::settingOpenAfterExportingSvg->value() );
 
   if ( dialog.exec() != QDialog::Accepted )
     return false;
@@ -4410,6 +4458,7 @@ bool QgsLayoutDesignerDialog::getSvgExportSettings( QgsLayoutExporter::SvgExport
   disableRasterTiles = options.mDisableRasterTilingCheckBox->isChecked();
   simplify = options.mSimplifyGeometriesCheckbox->isChecked();
   Qgis::TextRenderFormat textRenderFormat = static_cast< Qgis::TextRenderFormat >( options.mTextRenderFormatComboBox->currentData().toInt() );
+  QgsLayoutExporter::settingOpenAfterExportingSvg->setValue( options.mOpenAfterExportingCheckBox->isChecked() );
 
   if ( mLayout )
   {
@@ -4498,7 +4547,7 @@ bool QgsLayoutDesignerDialog::getPdfExportSettings( QgsLayoutExporter::PdfExport
       break;
     }
 
-    if ( map->mapRotation() != 0 || map->itemRotation() != 0 || map->dataDefinedProperties().isActive( QgsLayoutObject::MapRotation ) )
+    if ( map->mapRotation() != 0 || map->itemRotation() != 0 || map->dataDefinedProperties().isActive( QgsLayoutObject::DataDefinedProperty::MapRotation ) )
     {
       allowGeoPdfExport = false;
       dialogGeoPdfReason = tr( "One or more map items are rotated. This is not supported for GeoPDF export." );
@@ -4519,6 +4568,7 @@ bool QgsLayoutDesignerDialog::getPdfExportSettings( QgsLayoutExporter::PdfExport
   dialog.setUseOgcBestPracticeFormat( useOgcBestPracticeFormat );
   dialog.setExportThemes( exportThemes );
   dialog.setLosslessImageExport( losslessImages );
+  dialog.setOpenAfterExporting( QgsLayoutExporter::settingOpenAfterExportingPdf->value() );
 
   if ( dialog.exec() != QDialog::Accepted )
     return false;
@@ -4534,6 +4584,7 @@ bool QgsLayoutDesignerDialog::getPdfExportSettings( QgsLayoutExporter::PdfExport
   exportThemes = dialog.exportThemes();
   geoPdfLayerOrder = dialog.geoPdfLayerOrder();
   losslessImages = dialog.losslessImageExport();
+  QgsLayoutExporter::settingOpenAfterExportingPdf->setValue( dialog.openAfterExporting() );
 
   if ( mLayout )
   {
@@ -4769,6 +4820,7 @@ void QgsLayoutDesignerDialog::toggleActions( bool layoutAvailable )
   }
 }
 
+#if defined( HAVE_QTPRINTER )
 void QgsLayoutDesignerDialog::setPrinterPageOrientation( QgsLayoutItemPage::Orientation orientation )
 {
   if ( !mSetPageOrientation )
@@ -4797,6 +4849,7 @@ QPrinter *QgsLayoutDesignerDialog::printer()
 
   return mPrinter.get();
 }
+#endif
 
 QString QgsLayoutDesignerDialog::reportTypeString()
 {
@@ -4873,7 +4926,7 @@ bool QgsLayoutDesignerDialog::checkBeforeExport( )
   if ( mLayout )
   {
     QgsLayoutValidityCheckContext context( mLayout );
-    return QgsValidityCheckResultsWidget::runChecks( QgsAbstractValidityCheck::TypeLayoutCheck, &context, tr( "Checking Layout" ),
+    return QgsValidityCheckResultsWidget::runChecks( static_cast< int >( QgsAbstractValidityCheck::Type::LayoutCheck ), &context, tr( "Checking Layout" ),
            tr( "The layout generated the following warnings. Please review and address these before proceeding with the layout export." ), this );
   }
   else
@@ -5040,4 +5093,13 @@ void QgsLayoutDesignerDialog::toolButtonActionTriggered( QAction *action )
     settings.setValue( QStringLiteral( "LayoutDesigner/atlasExportAction" ), 3 );
 
   bt->setDefaultAction( action );
+}
+
+void QgsLayoutDesignerDialog::onItemDestroyed( QObject *item )
+{
+  if ( QgsLayoutItemBaseWidget *widget = qobject_cast< QgsLayoutItemBaseWidget * >( mItemPropertiesStack->mainPanel() ) )
+  {
+    if ( widget->layoutObject() == item )
+      delete mItemPropertiesStack->takeMainPanel();
+  }
 }

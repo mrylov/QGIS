@@ -41,7 +41,6 @@ class QgsBrowserModel;
  * The implementation is generic enough to handle other layer search and
  * selection widgets.
  *
- * \since QGIS 3.0
  */
 class GUI_EXPORT QgsAbstractDataSourceWidget : public QDialog
 {
@@ -96,6 +95,16 @@ class GUI_EXPORT QgsAbstractDataSourceWidget : public QDialog
      */
     virtual void reset();
 
+    /**
+     * Configure the widget from a layer \a uri by selecting the layer path or connection options.
+     * The base implementation does nothing and returns FALSE: providers with ConfigureSourceSelectFromUri capability
+     * must override to implement this functionality.
+     * \return TRUE on success.
+     * \note Not all data providers may be able to configure the widget from the provided uri, in that case this method returns FALSE.
+     * \since QGIS 3.38
+     */
+    virtual bool configureFromUri( const QString &uri );
+
   signals:
 
     /**
@@ -117,7 +126,7 @@ class GUI_EXPORT QgsAbstractDataSourceWidget : public QDialog
     /**
      * Emitted when one or more GDAL supported layers are selected for addition
      * \param layersList list of layers protocol URIs
-     * \since 3.20
+     * \since QGIS 3.20
      */
     void addRasterLayers( const QStringList &layersList );
 

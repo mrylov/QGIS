@@ -41,6 +41,9 @@ QgsMetadataWidget::QgsMetadataWidget( QWidget *parent, QgsMapLayer *layer )
   // Disable the encoding
   encodingFrame->setHidden( true );
 
+  spinBoxZMinimum->setClearValue( 0 );
+  spinBoxZMaximum->setClearValue( 0 );
+
   // Default categories, we want them translated, so we are not using a CSV.
   mDefaultCategories << tr( "Farming" ) << tr( "Climatology Meteorology Atmosphere" ) << tr( "Location" ) << tr( "Intelligence Military" ) << tr( "Transportation" ) << tr( "Structure" ) << tr( "Boundaries" );
   mDefaultCategories << tr( "Inland Waters" ) << tr( "Planning Cadastre" ) << tr( "Geoscientific Information" ) << tr( "Elevation" ) << tr( "Health" ) << tr( "Biota" ) << tr( "Oceans" ) << tr( "Environment" );
@@ -749,7 +752,7 @@ void QgsMetadataWidget::saveMetadata( QgsAbstractMetadataBase *metadata )
 
       // Extent
       QgsLayerMetadata::SpatialExtent spatialExtent;
-      spatialExtent.bounds = QgsBox3d( spatialExtentSelector->outputExtent() );
+      spatialExtent.bounds = QgsBox3D( spatialExtentSelector->outputExtent() );
       spatialExtent.bounds.setZMinimum( spinBoxZMinimum->value() );
       spatialExtent.bounds.setZMaximum( spinBoxZMaximum->value() );
       spatialExtent.extentCrs = spatialExtentSelector->outputCrs();
@@ -852,9 +855,9 @@ bool QgsMetadataWidget::checkMetadata()
     for ( const QgsAbstractMetadataBaseValidator::ValidationResult &result : std::as_const( validationResults ) )
     {
       errors += QLatin1String( "<b>" ) % result.section;
-      if ( ! QgsVariantUtils::isNull( result._identifier() ) )
+      if ( ! QgsVariantUtils::isNull( result.identifier() ) )
       {
-        errors += QLatin1Char( ' ' ) % QVariant( result._identifier().toInt() + 1 ).toString();
+        errors += QLatin1Char( ' ' ) % QVariant( result.identifier().toInt() + 1 ).toString();
       }
       errors += QLatin1String( "</b>: " ) % result.note % QLatin1String( "<br />" );
     }

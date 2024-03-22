@@ -84,11 +84,11 @@ QgsMeshDataBlock QgsMeshLayerUtils::datasetValues(
   }
   else
   {
-    const QgsMesh3dAveragingMethod *averagingMethod = meshLayer->rendererSettings().averagingMethod();
+    const QgsMesh3DAveragingMethod *averagingMethod = meshLayer->rendererSettings().averagingMethod();
     if ( !averagingMethod )
       return block;
 
-    const QgsMesh3dDataBlock block3d = meshLayer->dataset3dValues( index, valueIndex, count );
+    const QgsMesh3DDataBlock block3d = meshLayer->dataset3dValues( index, valueIndex, count );
     if ( !block3d.isValid() )
       return block;
 
@@ -285,6 +285,13 @@ static bool E3T_physicalToBarycentric( const QgsPointXY &pA, const QgsPointXY &p
   }
 
   return true;
+}
+
+bool QgsMeshLayerUtils::calculateBarycentricCoordinates(
+  const QgsPointXY &pA, const QgsPointXY &pB, const QgsPointXY &pC, const QgsPointXY &pP,
+  double &lam1, double &lam2, double &lam3 )
+{
+  return E3T_physicalToBarycentric( pA, pB, pC, pP, lam1, lam2, lam3 );
 }
 
 double QgsMeshLayerUtils::interpolateFromVerticesData( const QgsPointXY &p1, const QgsPointXY &p2, const QgsPointXY &p3,

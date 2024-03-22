@@ -24,6 +24,7 @@ import math
 from processing.algs.qgis.QgisAlgorithm import QgisAlgorithm
 from processing.algs.gdal.GdalUtils import GdalUtils
 from qgis.core import (QgsProcessing,
+                       QgsProcessingAlgorithm,
                        QgsProcessingException,
                        QgsProcessingUtils,
                        QgsProcessingParameterCrs,
@@ -76,17 +77,20 @@ class RasterCalculator(QgisAlgorithm):
                                                               multiLine=True))
         self.addParameter(QgsProcessingParameterMultipleLayers(self.LAYERS,
                                                                self.tr('Reference layer(s) (used for automated extent, cellsize, and CRS)'),
-                                                               layerType=QgsProcessing.TypeRaster,
+                                                               layerType=QgsProcessing.SourceType.TypeRaster,
                                                                optional=True))
         self.addParameter(QgsProcessingParameterNumber(self.CELLSIZE,
                                                        self.tr('Cell size (use 0 or empty to set it automatically)'),
-                                                       type=QgsProcessingParameterNumber.Double,
+                                                       type=QgsProcessingParameterNumber.Type.Double,
                                                        minValue=0.0, defaultValue=0.0, optional=True))
         self.addParameter(QgsProcessingParameterExtent(self.EXTENT,
                                                        self.tr('Output extent'),
                                                        optional=True))
         self.addParameter(QgsProcessingParameterCrs(self.CRS, 'Output CRS', optional=True))
         self.addParameter(QgsProcessingParameterRasterDestination(self.OUTPUT, self.tr('Output')))
+
+    def flags(self):
+        return super().flags() | QgsProcessingAlgorithm.Flag.FlagDeprecated
 
     def name(self):
         return 'rastercalculator'
@@ -183,9 +187,9 @@ class RasterCalculator(QgisAlgorithm):
                                    context.transformContext())
 
         res = calc.processCalculation(feedback)
-        if res == QgsRasterCalculator.ParserError:
+        if res == QgsRasterCalculator.Result.ParserError:
             raise QgsProcessingException(self.tr("Error parsing formula"))
-        elif res == QgsRasterCalculator.CalculationError:
+        elif res == QgsRasterCalculator.Result.CalculationError:
             raise QgsProcessingException(self.tr("An error occurred while performing the calculation"))
 
         return {self.OUTPUT: output}

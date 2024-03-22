@@ -28,18 +28,21 @@ from qgis.PyQt import sip
 from qgis.PyQt.QtCore import pyqtSignal, QSize
 from qgis.PyQt.QtWidgets import QDialog, QLabel, QComboBox
 
-from qgis.core import (QgsApplication,
-                       QgsExpression,
-                       QgsProperty,
-                       QgsUnitTypes,
-                       QgsMapLayer,
-                       QgsCoordinateReferenceSystem,
-                       QgsProcessingParameterNumber,
-                       QgsProcessingOutputNumber,
-                       QgsProcessingParameterDefinition,
-                       QgsProcessingModelChildParameterSource,
-                       QgsProcessingFeatureSourceDefinition,
-                       QgsProcessingUtils)
+from qgis.core import (
+    Qgis,
+    QgsApplication,
+    QgsExpression,
+    QgsProperty,
+    QgsUnitTypes,
+    QgsMapLayer,
+    QgsCoordinateReferenceSystem,
+    QgsProcessingParameterNumber,
+    QgsProcessingOutputNumber,
+    QgsProcessingParameterDefinition,
+    QgsProcessingModelChildParameterSource,
+    QgsProcessingFeatureSourceDefinition,
+    QgsProcessingUtils
+)
 from qgis.gui import QgsExpressionBuilderDialog
 from processing.tools.dataobjects import createExpressionContext, createContext
 
@@ -86,7 +89,7 @@ class ModelerNumberInputPanel(BASE, WIDGET):
         dlg = QgsExpressionBuilderDialog(None, str(self.leText.text()), self, 'generic', context)
 
         dlg.setWindowTitle(self.tr('Expression Based Input'))
-        if dlg.exec_() == QDialog.Accepted:
+        if dlg.exec() == QDialog.DialogCode.Accepted:
             exp = QgsExpression(dlg.expressionText())
             if not exp.hasParserError():
                 self.setValue(dlg.expressionText())
@@ -110,12 +113,12 @@ class ModelerNumberInputPanel(BASE, WIDGET):
 
     def setValue(self, value):
         if isinstance(value, QgsProcessingModelChildParameterSource):
-            if value.source() == QgsProcessingModelChildParameterSource.ModelParameter:
+            if value.source() == Qgis.ProcessingModelChildParameterSource.ModelParameter:
                 self.leText.setText('@' + value.parameterName())
-            elif value.source() == QgsProcessingModelChildParameterSource.ChildOutput:
+            elif value.source() == Qgis.ProcessingModelChildParameterSource.ChildOutput:
                 name = f"{value.outputChildId()}_{value.outputName()}"
                 self.leText.setText(name)
-            elif value.source() == QgsProcessingModelChildParameterSource.Expression:
+            elif value.source() == Qgis.ProcessingModelChildParameterSource.Expression:
                 self.leText.setText(value.expression())
             else:
                 self.leText.setText(str(value.staticValue()))
@@ -140,7 +143,7 @@ class NumberInputPanel(NUMBER_BASE, NUMBER_WIDGET):
         self.spnValue.setExpressionsEnabled(True)
 
         self.param = param
-        if self.param.dataType() == QgsProcessingParameterNumber.Integer:
+        if self.param.dataType() == QgsProcessingParameterNumber.Type.Integer:
             self.spnValue.setDecimals(0)
         else:
             # Guess reasonable step value
@@ -161,7 +164,7 @@ class NumberInputPanel(NUMBER_BASE, NUMBER_WIDGET):
 
         self.allowing_null = False
         # set default value
-        if param.flags() & QgsProcessingParameterDefinition.FlagOptional:
+        if param.flags() & QgsProcessingParameterDefinition.Flag.FlagOptional:
             self.spnValue.setShowClearButton(True)
             min = self.spnValue.minimum() - 1
             self.spnValue.setMinimum(min)
@@ -261,15 +264,15 @@ class DistanceInputPanel(NumberInputPanel):
         self.label = QLabel('')
 
         self.units_combo = QComboBox()
-        self.base_units = QgsUnitTypes.DistanceUnknownUnit
-        for u in (QgsUnitTypes.DistanceMeters,
-                  QgsUnitTypes.DistanceKilometers,
-                  QgsUnitTypes.DistanceFeet,
-                  QgsUnitTypes.DistanceMiles,
-                  QgsUnitTypes.DistanceYards):
+        self.base_units = QgsUnitTypes.DistanceUnit.DistanceUnknownUnit
+        for u in (QgsUnitTypes.DistanceUnit.DistanceMeters,
+                  QgsUnitTypes.DistanceUnit.DistanceKilometers,
+                  QgsUnitTypes.DistanceUnit.DistanceFeet,
+                  QgsUnitTypes.DistanceUnit.DistanceMiles,
+                  QgsUnitTypes.DistanceUnit.DistanceYards):
             self.units_combo.addItem(QgsUnitTypes.toString(u), u)
 
-        label_margin = self.fontMetrics().width('X')
+        label_margin = self.fontMetrics().horizontalAdvance('X')
         self.layout().insertSpacing(1, int(label_margin / 2))
         self.layout().insertWidget(2, self.label)
         self.layout().insertWidget(3, self.units_combo)
@@ -282,22 +285,22 @@ class DistanceInputPanel(NumberInputPanel):
         self.layout().insertWidget(4, self.warning_label)
         self.layout().insertSpacing(5, label_margin)
 
-        self.setUnits(QgsUnitTypes.DistanceUnknownUnit)
+        self.setUnits(QgsUnitTypes.DistanceUnit.DistanceUnknownUnit)
 
     def setUnits(self, units):
         self.label.setText(QgsUnitTypes.toString(units))
-        if QgsUnitTypes.unitType(units) != QgsUnitTypes.Standard:
+        if QgsUnitTypes.unitType(units) != QgsUnitTypes.DistanceUnitType.Standard:
             self.units_combo.hide()
             self.label.show()
         else:
             self.units_combo.setCurrentIndex(self.units_combo.findData(units))
             self.units_combo.show()
             self.label.hide()
-        self.warning_label.setVisible(units == QgsUnitTypes.DistanceDegrees)
+        self.warning_label.setVisible(units == QgsUnitTypes.DistanceUnit.DistanceDegrees)
         self.base_units = units
 
     def setUnitParameterValue(self, value):
-        units = QgsUnitTypes.DistanceUnknownUnit
+        units = QgsUnitTypes.DistanceUnit.DistanceUnknownUnit
         layer = self.getLayerFromValue(value)
         if isinstance(layer, QgsMapLayer):
             units = layer.crs().mapUnits()

@@ -408,11 +408,7 @@ bool QgsGrass::init( void )
     }
 #endif
 
-    //QString p = getenv( "PATH" );
-    //path.append( sep + p );
-
     QgsDebugMsgLevel( QStringLiteral( "sGrassModulesPaths = " ) + sGrassModulesPaths.join( ',' ), 2 );
-    //putEnv( "PATH", path );
 
     // TODO: move where it is required for QProcess
     // Set GRASS_PAGER if not set, it is necessary for some
@@ -425,6 +421,12 @@ bool QgsGrass::init( void )
     // MSYS terminal and built in shell.
     if ( !getenv( "GRASS_PAGER" ) )
     {
+#ifdef Q_OS_WIN
+      // avoid finding pager in current directory
+      bool skipCurrentDirectory = getenv( "NoDefaultCurrentDirectoryInExePath" ) != nullptr;
+      if ( !skipCurrentDirectory )
+        putEnv( QStringLiteral( "NoDefaultCurrentDirectoryInExePath" ), "1" );
+#endif
       QString pager;
       QStringList pagers;
       //pagers << "more" << "less" << "cat"; // se notes above
@@ -454,6 +456,11 @@ bool QgsGrass::init( void )
       {
         putEnv( QStringLiteral( "GRASS_PAGER" ), pager );
       }
+
+#ifdef Q_OS_WIN
+      if ( !skipCurrentDirectory )
+        putEnv( QStringLiteral( "NoDefaultCurrentDirectoryInExePath" ), "" );
+#endif
     }
     sInitialized = 1;
   }
@@ -482,23 +489,9 @@ bool QgsGrass::isValidGrassBaseDir( const QString &gisbase )
     return false;
   }
 
-  /* TODO: G_is_gisbase() was added to GRASS 6.1 06-05-24,
-           enable its use after some period (others do update) */
-#if 0
-  if ( QgsGrass::versionMajor() > 6 || QgsGrass::versionMinor() > 0 )
-  {
-    if ( G_is_gisbase( gisbase.toUtf8().constData() ) )
-      return true;
-  }
-  else
-  {
-#endif
-    QFileInfo gbi( gisbase + "/etc/element_list" );
-    if ( gbi.exists() )
-      return true;
-#if 0
-  }
-#endif
+  if ( G_is_gisbase( gisbase.toUtf8().constData() ) )
+    return true;
+
   return false;
 }
 

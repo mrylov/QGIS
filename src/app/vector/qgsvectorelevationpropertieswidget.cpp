@@ -39,7 +39,7 @@ QgsVectorElevationPropertiesWidget::QgsVectorElevationPropertiesWidget( QgsVecto
   mSurfaceLineStyleButton->setSymbolType( Qgis::SymbolType::Line );
   mSurfaceFillStyleButton->setSymbolType( Qgis::SymbolType::Fill );
   mSurfaceMarkerStyleButton->setSymbolType( Qgis::SymbolType::Marker );
-  mElevationLimitSpinBox->setClearValue( mElevationLimitSpinBox->minimum(), tr( "No set" ) );
+  mElevationLimitSpinBox->setClearValue( mElevationLimitSpinBox->minimum(), tr( "Not set" ) );
 
   mComboClamping->addItem( tr( "Clamped to Terrain" ), static_cast< int >( Qgis::AltitudeClamping::Terrain ) );
   mComboClamping->addItem( tr( "Relative to Terrain" ), static_cast< int >( Qgis::AltitudeClamping::Relative ) );
@@ -55,8 +55,8 @@ QgsVectorElevationPropertiesWidget::QgsVectorElevationPropertiesWidget( QgsVecto
   mStyleComboBox->addItem( QgsApplication::getThemeIcon( QStringLiteral( "mIconSurfaceElevationFillBelow.svg" ) ), tr( "Fill Below" ), static_cast< int >( Qgis::ProfileSurfaceSymbology::FillBelow ) );
   mStyleComboBox->addItem( QgsApplication::getThemeIcon( QStringLiteral( "mIconSurfaceElevationFillAbove.svg" ) ), tr( "Fill Above" ), static_cast< int >( Qgis::ProfileSurfaceSymbology::FillAbove ) );
 
-  initializeDataDefinedButton( mOffsetDDBtn, QgsMapLayerElevationProperties::ZOffset );
-  initializeDataDefinedButton( mExtrusionDDBtn, QgsMapLayerElevationProperties::ExtrusionHeight );
+  initializeDataDefinedButton( mOffsetDDBtn, QgsMapLayerElevationProperties::Property::ZOffset );
+  initializeDataDefinedButton( mExtrusionDDBtn, QgsMapLayerElevationProperties::Property::ExtrusionHeight );
 
   syncToLayer( layer );
 
@@ -366,7 +366,7 @@ void QgsVectorElevationPropertiesWidget::updateProperty()
 void QgsVectorElevationPropertiesWidget::initializeDataDefinedButton( QgsPropertyOverrideButton *button, QgsMapLayerElevationProperties::Property key )
 {
   button->blockSignals( true );
-  button->init( key, mPropertyCollection, QgsMapLayerElevationProperties::propertyDefinitions(), nullptr );
+  button->init( static_cast< int >( key ), mPropertyCollection, QgsMapLayerElevationProperties::propertyDefinitions(), nullptr );
   connect( button, &QgsPropertyOverrideButton::changed, this, &QgsVectorElevationPropertiesWidget::updateProperty );
   button->registerExpressionContextGenerator( this );
   button->blockSignals( false );

@@ -61,32 +61,32 @@ class retile(GdalAlgorithm):
 
     def initAlgorithm(self, config=None):
         self.methods = ((self.tr('Nearest Neighbour'), 'near'),
-                        (self.tr('Bilinear'), 'bilinear'),
-                        (self.tr('Cubic'), 'cubic'),
-                        (self.tr('Cubic Spline'), 'cubicspline'),
-                        (self.tr('Lanczos Windowed Sinc'), 'lanczos'),)
+                        (self.tr('Bilinear (2x2 Kernel)'), 'bilinear'),
+                        (self.tr('Cubic (4x4 Kernel)'), 'cubic'),
+                        (self.tr('Cubic B-Spline (4x4 Kernel)'), 'cubicspline'),
+                        (self.tr('Lanczos (6x6 Kernel)'), 'lanczos'),)
 
         self.addParameter(QgsProcessingParameterMultipleLayers(self.INPUT,
                                                                self.tr('Input files'),
-                                                               QgsProcessing.TypeRaster))
+                                                               QgsProcessing.SourceType.TypeRaster))
         self.addParameter(QgsProcessingParameterNumber(self.TILE_SIZE_X,
                                                        self.tr('Tile width'),
-                                                       type=QgsProcessingParameterNumber.Integer,
+                                                       type=QgsProcessingParameterNumber.Type.Integer,
                                                        minValue=0,
                                                        defaultValue=256))
         self.addParameter(QgsProcessingParameterNumber(self.TILE_SIZE_Y,
                                                        self.tr('Tile height'),
-                                                       type=QgsProcessingParameterNumber.Integer,
+                                                       type=QgsProcessingParameterNumber.Type.Integer,
                                                        minValue=0,
                                                        defaultValue=256))
         self.addParameter(QgsProcessingParameterNumber(self.OVERLAP,
                                                        self.tr('Overlap in pixels between consecutive tiles'),
-                                                       type=QgsProcessingParameterNumber.Integer,
+                                                       type=QgsProcessingParameterNumber.Type.Integer,
                                                        minValue=0,
                                                        defaultValue=0))
         self.addParameter(QgsProcessingParameterNumber(self.LEVELS,
                                                        self.tr('Number of pyramids levels to build'),
-                                                       type=QgsProcessingParameterNumber.Integer,
+                                                       type=QgsProcessingParameterNumber.Type.Integer,
                                                        minValue=0,
                                                        defaultValue=1))
 
@@ -134,7 +134,7 @@ class retile(GdalAlgorithm):
                                                     defaultValue=False))
 
         for param in params:
-            param.setFlags(param.flags() | QgsProcessingParameterDefinition.FlagAdvanced)
+            param.setFlags(param.flags() | QgsProcessingParameterDefinition.Flag.FlagAdvanced)
             self.addParameter(param)
 
         self.addParameter(QgsProcessingParameterFolderDestination(self.OUTPUT,

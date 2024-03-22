@@ -58,7 +58,20 @@ QgsDataSourceManagerDialog::QgsDataSourceManagerDialog( QgsBrowserGuiModel *brow
   mBrowserWidget = new QgsBrowserDockWidget( QStringLiteral( "Browser" ), mBrowserModel, this );
   mBrowserWidget->setFeatures( QDockWidget::NoDockWidgetFeatures );
   mBrowserWidget->setTitleBarWidget( new QWidget( mBrowserWidget ) );
-  ui->mOptionsStackedWidget->addWidget( mBrowserWidget );
+
+  QWidget *browserWidgetWrapper = new QWidget( this );
+  browserWidgetWrapper->setLayout( new QVBoxLayout( browserWidgetWrapper ) );
+  browserWidgetWrapper->layout()->addWidget( mBrowserWidget );
+  QDialogButtonBox *browserButtonBox = new QDialogButtonBox( QDialogButtonBox::StandardButton::Close | QDialogButtonBox::StandardButton::Help,  browserWidgetWrapper );
+  browserWidgetWrapper->layout()->addWidget( browserButtonBox );
+
+  connect( browserButtonBox, &QDialogButtonBox::helpRequested, this, [ = ]
+  {
+    QgsHelp::openHelp( QStringLiteral( "managing_data_source/opening_data.html#the-browser-panel" ) );
+  } );
+  connect( browserButtonBox, &QDialogButtonBox::rejected, this, &QgsDataSourceManagerDialog::reject );
+
+  ui->mOptionsStackedWidget->addWidget( browserWidgetWrapper );
   mPageProviderKeys.append( QStringLiteral( "browser" ) );
   mPageProviderNames.append( QStringLiteral( "browser" ) );
 
@@ -162,6 +175,22 @@ void QgsDataSourceManagerDialog::reset()
   }
 }
 
+void QgsDataSourceManagerDialog::configureFromUri( const QString &pageName, const QString &uri )
+{
+  const int pageIdx = mPageProviderNames.indexOf( pageName );
+  if ( pageIdx != -1 )
+  {
+    QTimer::singleShot( 0, this, [ = ]
+    {
+      setCurrentPage( pageIdx );
+      if ( QgsAbstractDataSourceWidget *dataSourceWidget = qobject_cast<QgsAbstractDataSourceWidget *>( ui->mOptionsStackedWidget->currentWidget() ) )
+      {
+        dataSourceWidget->configureFromUri( uri );
+      }
+    } );
+  }
+}
+
 void QgsDataSourceManagerDialog::rasterLayersAdded( const QStringList &layersList )
 {
   emit addRasterLayers( layersList );
@@ -179,7 +208,7 @@ void QgsDataSourceManagerDialog::addProviderDialog( QgsAbstractDataSourceWidget 
   ui->mOptionsStackedWidget->addWidget( dlg );
   QListWidgetItem *layerItem = new QListWidgetItem( text, ui->mOptionsListWidget );
   layerItem->setData( Qt::UserRole, providerName );
-  layerItem->setToolTip( toolTip.isEmpty() ? tr( "Add %1 layer" ).arg( providerName ) : toolTip );
+  layerItem->setToolTip( toolTip.isEmpty() ? tr( "Add %1 layer" ).arg( text ) : toolTip );
   layerItem->setIcon( icon );
   // Set crs and extent from canvas
   if ( mMapCanvas )
@@ -233,7 +262,7 @@ void QgsDataSourceManagerDialog::makeConnections( QgsAbstractDataSourceWidget *d
         // otherwise we will be emitting double signals for the old/new signal for these layer types
         break;
 
-      case Qgis::LayerType::TiledMesh:
+      case Qgis::LayerType::TiledScene:
         emit addLayer( type, url, baseName, providerKey );
         break;
     }

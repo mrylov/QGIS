@@ -107,7 +107,7 @@ class CORE_EXPORT QgsMeshRendererScalarSettings
       /**
        * Does not use resampling
        */
-      None = 0,
+      NoResampling = 0,
 
       /**
        * Does a simple average of values defined for all surrounding faces/vertices
@@ -183,7 +183,7 @@ class CORE_EXPORT QgsMeshRendererScalarSettings
 
   private:
     QgsColorRampShader mColorRampShader;
-    DataResamplingMethod mDataResamplingMethod = DataResamplingMethod::None;
+    DataResamplingMethod mDataResamplingMethod = DataResamplingMethod::NoResampling;
     double mClassificationMinimum = 0;
     double mClassificationMaximum = 0;
     double mOpacity = 1;
@@ -657,14 +657,14 @@ class CORE_EXPORT QgsMeshRendererSettings
      *
      * Caller does not own the resulting pointer
      */
-    QgsMesh3dAveragingMethod *averagingMethod() const;
+    QgsMesh3DAveragingMethod *averagingMethod() const;
 
     /**
      * Sets averaging method for conversion of 3d stacked mesh data to 2d data
      *
      * Ownership of the method is not transferred.
      */
-    void setAveragingMethod( QgsMesh3dAveragingMethod *method );
+    void setAveragingMethod( QgsMesh3DAveragingMethod *method );
 
     //! Writes configuration to a new DOM element
     QDomElement writeXml( QDomDocument &doc, const QgsReadWriteContext &context = QgsReadWriteContext() ) const;
@@ -717,7 +717,7 @@ class CORE_EXPORT QgsMeshRendererSettings
     int mActiveVectorDatasetGroup = -1;
 
     //! Averaging method to get 2D datasets from 3D stacked mesh datasets
-    std::shared_ptr<QgsMesh3dAveragingMethod> mAveragingMethod;
+    std::shared_ptr<QgsMesh3DAveragingMethod> mAveragingMethod;
 };
 
 #endif //QGSMESHRENDERERSETTINGS_H

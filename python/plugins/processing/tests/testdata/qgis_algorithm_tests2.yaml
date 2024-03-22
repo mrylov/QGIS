@@ -359,6 +359,21 @@ tests:
           fields:
             fid: skip
 
+  - algorithm: native:extractspecificvertices
+    name: Extract specific vertices points
+    params:
+      INPUT:
+        name: multipoints.gml
+        type: vector
+      VERTICES: '0'
+    results:
+      OUTPUT:
+        name: expected/extract_specific_nodes_points.gml
+        type: vector
+        compare:
+          fields:
+            fid: skip
+
   - algorithm: native:fuzzifyrasterlinearmembership
     name: Test (native:fuzzifyrasterlinearmembership)
     params:
@@ -1190,7 +1205,7 @@ tests:
           - 'Maximum value: 15:29:22'
           - 'NULL \(missing\) values: 1'
 
-  - algorithm: qgis:rastercalculator
+  - algorithm: native:rastercalc
     name: Raster Calculator with cellsize
     params:
       LAYERS:
@@ -1199,13 +1214,14 @@ tests:
             type: raster
         type: multi
       CELLSIZE: 0.001
-      EXPRESSION: dem@1
+      EXPRESSION: '"dem.tif@1"'
     results:
       OUTPUT:
         hash: 525577c05dd999239d9c6f95fd5e70d96355da3a0ea71bfcf021e729
+        hash: 6ced822cc490c7a3d9346b6c8cd4b282eb4e2a9fdd6e7371f6174117
         type: rasterhash
 
-  - algorithm: qgis:rastercalculator
+  - algorithm: native:rastercalc
     name: Raster Calculator
     params:
       LAYERS:
@@ -1214,7 +1230,7 @@ tests:
             type: raster
         type: multi
       CELLSIZE: 0.0
-      EXPRESSION: dem@1 * 2
+      EXPRESSION: '"dem.tif@1" * 2'
     results:
       OUTPUT:
         hash: 98daf025230ec9d031f7502c6a80a3b04dd060808d6b7bcb4328e87c
@@ -1807,6 +1823,7 @@ tests:
 
   - algorithm: native:shortestpathpointtopoint
     name: Shortest path (point to point, shortest route)
+    ellipsoid: WGS84
     params:
       DEFAULT_DIRECTION: 2
       DEFAULT_SPEED: 5.0
@@ -1837,6 +1854,7 @@ tests:
 
   - algorithm: native:shortestpathpointtopoint
     name: Shortest path (point to point, fastest route)
+    ellipsoid: WGS84
     params:
       DEFAULT_DIRECTION: 2
       DEFAULT_SPEED: 5.0
@@ -1868,6 +1886,7 @@ tests:
 
   - algorithm: native:shortestpathlayertopoint
     name: Shortest path layer to point
+    ellipsoid: WGS84
     params:
       DEFAULT_DIRECTION: 2
       DEFAULT_SPEED: 5.0
@@ -1898,6 +1917,7 @@ tests:
 
   - algorithm: native:shortestpathpointtolayer
     name: Shortest path point to layer
+    ellipsoid: WGS84
     params:
       DEFAULT_DIRECTION: 2
       DEFAULT_SPEED: 5.0
@@ -1928,6 +1948,7 @@ tests:
 
   - algorithm: native:serviceareafrompoint
     name: Service area from point (shortest, nodes)
+    ellipsoid: WGS84
     params:
       DEFAULT_DIRECTION: 2
       DEFAULT_SPEED: 50.0
@@ -1959,6 +1980,7 @@ tests:
 
   - algorithm: native:serviceareafrompoint
     name: Service area from point (shortest, nodes, bounds)
+    ellipsoid: WGS84
     params:
       DEFAULT_DIRECTION: 2
       DEFAULT_SPEED: 50.0
@@ -1985,6 +2007,7 @@ tests:
 
   - algorithm: native:serviceareafrompoint
     name: Service area from point (shortest, lines)
+    ellipsoid: WGS84
     params:
       DEFAULT_DIRECTION: 2
       DEFAULT_SPEED: 50.0
@@ -2016,6 +2039,7 @@ tests:
 
   - algorithm: native:serviceareafrompoint
     name: Service area from point (fastest, old parameter)
+    ellipsoid: WGS84
     params:
       DEFAULT_DIRECTION: 2
       DEFAULT_SPEED: 50.0
@@ -2050,6 +2074,7 @@ tests:
 
   - algorithm: native:serviceareafrompoint
     name: Service area from point (fastest, new parameter)
+    ellipsoid: WGS84
     params:
       DEFAULT_DIRECTION: 2
       DEFAULT_SPEED: 50.0
@@ -2084,6 +2109,7 @@ tests:
 
   - algorithm: native:serviceareafromlayer
     name: Service area from layer (shortest, nodes)
+    ellipsoid: WGS84
     params:
       DEFAULT_DIRECTION: 2
       DEFAULT_SPEED: 50.0
@@ -2119,6 +2145,7 @@ tests:
 
   - algorithm: native:serviceareafromlayer
     name: Service area from layer (shortest, nodes, boundary)
+    ellipsoid: WGS84
     params:
       DEFAULT_DIRECTION: 2
       DEFAULT_SPEED: 50.0
@@ -2146,6 +2173,7 @@ tests:
 
   - algorithm: native:serviceareafromlayer
     name: Service area from layer (shortest, lines)
+    ellipsoid: WGS84
     params:
       DEFAULT_DIRECTION: 2
       DEFAULT_SPEED: 50.0

@@ -9,7 +9,6 @@ __author__ = 'Nyall Dawson'
 __date__ = '04/03/2022'
 __copyright__ = 'Copyright 2022, The QGIS Project'
 
-import qgis  # NOQA
 from qgis.PyQt.QtCore import QSize
 from qgis.PyQt.QtXml import QDomDocument
 from qgis.core import (
@@ -24,12 +23,13 @@ from qgis.core import (
     QgsTileXYZ,
     QgsVectorTileMatrixSet,
 )
-from qgis.testing import start_app, unittest
+import unittest
+from qgis.testing import start_app, QgisTestCase
 
 start_app()
 
 
-class TestQgsTiles(unittest.TestCase):
+class TestQgsTiles(QgisTestCase):
 
     def testQgsTileXYZ(self):
         tile = QgsTileXYZ(1, 2, 3)

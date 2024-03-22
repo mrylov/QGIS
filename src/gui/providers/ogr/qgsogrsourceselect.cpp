@@ -96,7 +96,7 @@ QgsOgrSourceSelect::QgsOgrSourceSelect( QWidget *parent, Qt::WindowFlags fl, Qgs
 
   //add protocol drivers
   QStringList protocolTypes = QStringLiteral( "HTTP/HTTPS/FTP,vsicurl;AWS S3,vsis3;Google Cloud Storage,vsigs;" ).split( ';' );
-  protocolTypes += QStringLiteral( "Microsoft Azure Blob,vsiaz;Alibaba Cloud OSS,vsioss;OpenStack Swift Object Storage,vsiswift;WFS3 (experimental),WFS3" ).split( ';' );
+  protocolTypes += QStringLiteral( "Microsoft Azure Blob,vsiaz;Microsoft Azure Data Lake Storage,vsiadls;Alibaba Cloud OSS,vsioss;OpenStack Swift Object Storage,vsiswift;WFS3 (experimental),WFS3" ).split( ';' );
   protocolTypes += QgsProviderRegistry::instance()->protocolDrivers().split( ';' );
   for ( int i = 0; i < protocolTypes.count(); i++ )
   {
@@ -167,6 +167,7 @@ bool QgsOgrSourceSelect::isProtocolCloudType()
   return ( cmbProtocolTypes->currentText() == QLatin1String( "AWS S3" ) ||
            cmbProtocolTypes->currentText() == QLatin1String( "Google Cloud Storage" ) ||
            cmbProtocolTypes->currentText() == QLatin1String( "Microsoft Azure Blob" ) ||
+           cmbProtocolTypes->currentText() == QLatin1String( "Microsoft Azure Data Lake Storage" ) ||
            cmbProtocolTypes->currentText() == QLatin1String( "Alibaba Cloud OSS" ) ||
            cmbProtocolTypes->currentText() == QLatin1String( "OpenStack Swift Object Storage" ) );
 }
@@ -651,6 +652,43 @@ void QgsOgrSourceSelect::cmbProtocolTypes_currentIndexChanged( const QString &te
 void QgsOgrSourceSelect::showHelp()
 {
   QgsHelp::openHelp( QStringLiteral( "managing_data_source/opening_data.html#loading-a-layer-from-a-file" ) );
+}
+
+bool QgsOgrSourceSelect::configureFromUri( const QString &uri )
+{
+  mDataSources.clear();
+  mDataSources.append( uri );
+  const QVariantMap decodedUri = QgsProviderRegistry::instance()->decodeUri( QStringLiteral( "ogr" ), uri );
+  mFileWidget->setFilePath( decodedUri.value( QStringLiteral( "path" ), QString() ).toString() );
+  const QVariantMap openOptions = decodedUri.value( QStringLiteral( "openOptions" ) ).toMap();
+  if ( ! openOptions.isEmpty() )
+  {
+    for ( auto opt = openOptions.constBegin(); opt != openOptions.constEnd(); ++opt )
+    {
+      const auto widget { std::find_if( mOpenOptionsWidgets.cbegin(), mOpenOptionsWidgets.cend(), [ = ]( QWidget * widget )
+      {
+        return widget->objectName() == opt.key();
+      } ) };
+
+      if ( widget != mOpenOptionsWidgets.cend() )
+      {
+        if ( auto cb = qobject_cast<QComboBox *>( *widget ) )
+        {
+          const auto idx { cb->findText( opt.value().toString() ) };
+          if ( idx >= 0 )
+          {
+            cb->setCurrentIndex( idx );
+          }
+        }
+        else if ( auto le = qobject_cast<QLineEdit *>( *widget ) )
+        {
+          le->setText( opt.value().toString() );
+        }
+      }
+    }
+  }
+
+  return true;
 }
 
 void QgsOgrSourceSelect::clearOpenOptions()

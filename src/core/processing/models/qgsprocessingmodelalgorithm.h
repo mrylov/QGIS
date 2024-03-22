@@ -33,7 +33,6 @@
  * \class QgsProcessingModelAlgorithm
  * \ingroup core
  * \brief Model based algorithm with processing.
-  * \since QGIS 3.0
  */
 class CORE_EXPORT QgsProcessingModelAlgorithm : public QgsProcessingAlgorithm
 {
@@ -462,7 +461,6 @@ class CORE_EXPORT QgsProcessingModelAlgorithm : public QgsProcessingAlgorithm
     /**
      * \brief Definition of a expression context variable available during model execution.
      * \ingroup core
-     * \since QGIS 3.0
      */
     class CORE_EXPORT VariableDefinition
     {
@@ -501,7 +499,7 @@ class CORE_EXPORT QgsProcessingModelAlgorithm : public QgsProcessingAlgorithm
      * algorithm \a results must be passed.
      * \see createExpressionContextScopeForChildAlgorithm()
      */
-    QMap< QString, QgsProcessingModelAlgorithm::VariableDefinition > variablesForChildAlgorithm( const QString &childId, QgsProcessingContext &context, const QVariantMap &modelParameters = QVariantMap(),
+    QMap< QString, QgsProcessingModelAlgorithm::VariableDefinition > variablesForChildAlgorithm( const QString &childId, QgsProcessingContext *context = nullptr, const QVariantMap &modelParameters = QVariantMap(),
         const QVariantMap &results = QVariantMap() ) const;
 
     /**
@@ -643,7 +641,7 @@ class CORE_EXPORT QgsProcessingModelAlgorithm : public QgsProcessingAlgorithm
      * I.e. we only reject outputs which we know can NEVER be acceptable, but
      * if there's doubt then we default to returning TRUE.
      */
-    static bool vectorOutputIsCompatibleType( const QList<int> &acceptableDataTypes, QgsProcessing::SourceType outputType );
+    static bool vectorOutputIsCompatibleType( const QList<int> &acceptableDataTypes, Qgis::ProcessingSourceType outputType );
 
     /**
      * Tries to reattach all child algorithms to their linked algorithms.

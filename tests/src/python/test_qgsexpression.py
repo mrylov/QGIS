@@ -9,7 +9,6 @@ __author__ = 'Nathan Woodrow'
 __date__ = '4/11/2012'
 __copyright__ = 'Copyright 2012, The QGIS Project'
 
-import qgis  # NOQA
 from qgis.PyQt.QtCore import QVariant
 from qgis.core import (
     NULL,
@@ -272,13 +271,13 @@ class TestQgsExpressionCustomFunctions(unittest.TestCase):
 
         # test when value is null
         field = "myfield"
-        value = QVariant()
+        value = NULL
         res = '"myfield" IS NULL'
         self.assertEqual(e.createFieldEqualityExpression(field, value), res)
 
         # test when value is null and field name has a quote
         field = "my'field"
-        value = QVariant()
+        value = NULL
         res = '"my\'field" IS NULL'
         self.assertEqual(e.createFieldEqualityExpression(field, value), res)
 
@@ -333,8 +332,10 @@ class TestQgsExpressionCustomFunctions(unittest.TestCase):
             "name 'foo' is not defined:<pre>Traceback \\(most recent call last\\):\n"
             "  File \".*qgsfunction.py\", line [0-9]+, in func\n"
             "    return self.function\\(\\*values, \\*\\*kwvalues\\)\n"
+            "(.*?\n)?"
             "  File \".*test_qgsexpression.py\", line [0-9]+, in raise_exception\n"
             "    foo  # noqa: F821\n"
+            "(.*?\n)?"
             "NameError: name \'foo\' is not defined"
             "\n</pre>"
         )

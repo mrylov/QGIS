@@ -57,7 +57,7 @@ QString QgsFileUtils::representFileSize( qint64 bytes )
 
 QStringList QgsFileUtils::extensionsFromFilter( const QString &filter )
 {
-  const thread_local QRegularExpression rx( QStringLiteral( "\\*\\.([a-zA-Z0-9]+)" ) );
+  const thread_local QRegularExpression rx( QStringLiteral( "\\*\\.([a-zA-Z0-9\\.]+)" ) );
   QStringList extensions;
   QRegularExpressionMatchIterator matches = rx.globalMatch( filter );
 
@@ -91,11 +91,7 @@ bool QgsFileUtils::fileMatchesFilter( const QString &fileName, const QString &fi
   const QStringList parts = filter.split( QStringLiteral( ";;" ) );
   for ( const QString &part : parts )
   {
-#if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
-    const QStringList globPatterns = wildcardsFromFilter( part ).split( ' ', QString::SkipEmptyParts );
-#else
     const QStringList globPatterns = wildcardsFromFilter( part ).split( ' ', Qt::SkipEmptyParts );
-#endif
     for ( const QString &glob : globPatterns )
     {
       const QString re = QRegularExpression::wildcardToRegularExpression( glob );

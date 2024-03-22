@@ -97,7 +97,7 @@ void QgsMapCanvasAnnotationItem::updateBoundingRect()
   const double fillSymbolBleed = mAnnotation && mAnnotation->fillSymbol() ?
                                  QgsSymbolLayerUtils::estimateMaxSymbolBleed( mAnnotation->fillSymbol(), rc ) : 0;
 
-  const double mmToPixelScale = mMapCanvas->logicalDpiX() / 25.4;
+  const double mmToPixelScale = mMapCanvas->physicalDpiX() / 25.4;
 
   if ( mAnnotation && !mAnnotation->hasFixedMapPosition() )
   {
@@ -172,7 +172,7 @@ void QgsMapCanvasAnnotationItem::setFeatureForMapPosition()
 
   searchRect = mMapCanvas->mapSettings().mapToLayerCoordinates( vectorLayer, searchRect );
 
-  QgsFeatureIterator fit = vectorLayer->getFeatures( QgsFeatureRequest().setFilterRect( searchRect ).setFlags( QgsFeatureRequest::ExactIntersect ).setLimit( 1 ) );
+  QgsFeatureIterator fit = vectorLayer->getFeatures( QgsFeatureRequest().setFilterRect( searchRect ).setFlags( Qgis::FeatureRequestFlag::ExactIntersect ).setLimit( 1 ) );
 
   QgsFeature currentFeature;
   ( void )fit.nextFeature( currentFeature );

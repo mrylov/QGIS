@@ -21,7 +21,8 @@ from qgis.core import (
     QgsVectorDataProvider,
     QgsVectorLayer,
 )
-from qgis.testing import start_app, unittest
+import unittest
+from qgis.testing import start_app, QgisTestCase
 
 from utilities import unitTestDataPath
 
@@ -32,7 +33,7 @@ TEST_DATA_DIR = unitTestDataPath()
 # Note - doesn't implement ProviderTestCase as OGR provider is tested by the shapefile provider test
 
 
-class TestPyQgsTabfileProvider(unittest.TestCase):
+class TestPyQgsTabfileProvider(QgisTestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -76,7 +77,7 @@ class TestPyQgsTabfileProvider(unittest.TestCase):
         basetestfile = os.path.join(TEST_DATA_DIR, 'tab_file.tab')
         vl = QgsVectorLayer(f'{basetestfile}|layerid=0', 'test', 'ogr')
         caps = vl.dataProvider().capabilities()
-        self.assertTrue(caps & QgsVectorDataProvider.AddFeatures)
+        self.assertTrue(caps & QgsVectorDataProvider.Capability.AddFeatures)
 
         # We should be really opened in read-only mode even if write capabilities are declared
         self.assertEqual(vl.dataProvider().property("_debug_open_mode"), "read-only")
@@ -113,7 +114,7 @@ class TestPyQgsTabfileProvider(unittest.TestCase):
         # symbols should not be fetched by default
         self.assertFalse(any(f.embeddedSymbol() for f in layer.getFeatures()))
 
-        symbols = [f.embeddedSymbol().clone() for f in layer.getFeatures(QgsFeatureRequest().setFlags(QgsFeatureRequest.EmbeddedSymbols))]
+        symbols = [f.embeddedSymbol().clone() for f in layer.getFeatures(QgsFeatureRequest().setFlags(QgsFeatureRequest.Flag.EmbeddedSymbols))]
         self.assertTrue(all(symbols))
         self.assertCountEqual([s.color().name() for s in symbols], ['#0040c0', '#ffb060', '#e03800'])
 

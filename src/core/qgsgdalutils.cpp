@@ -39,9 +39,8 @@ bool QgsGdalUtils::supportsRasterCreate( GDALDriverH driver )
     // it supports Create() but only for vector side
     return false;
   }
-  char **driverMetadata = GDALGetMetadata( driver, nullptr );
-  return  CSLFetchBoolean( driverMetadata, GDAL_DCAP_CREATE, false ) &&
-          CSLFetchBoolean( driverMetadata, GDAL_DCAP_RASTER, false );
+  return GDALGetMetadataItem( driver, GDAL_DCAP_CREATE, nullptr ) &&
+         GDALGetMetadataItem( driver, GDAL_DCAP_RASTER, nullptr );
 }
 
 gdal::dataset_unique_ptr QgsGdalUtils::createSingleBandMemoryDataset( GDALDataType dataType, const QgsRectangle &extent, int width, int height, const QgsCoordinateReferenceSystem &crs )
@@ -69,7 +68,7 @@ gdal::dataset_unique_ptr QgsGdalUtils::createMultiBandMemoryDataset( GDALDataTyp
   geoTransform[4] = 0;
   geoTransform[5] = -cellSizeY;
 
-  GDALSetProjection( hSrcDS.get(), crs.toWkt( QgsCoordinateReferenceSystem::WKT_PREFERRED_GDAL ).toLatin1().constData() );
+  GDALSetProjection( hSrcDS.get(), crs.toWkt( Qgis::CrsWktVariant::PreferredGdal ).toLatin1().constData() );
   GDALSetGeoTransform( hSrcDS.get(), geoTransform );
   return hSrcDS;
 }
@@ -100,7 +99,7 @@ gdal::dataset_unique_ptr QgsGdalUtils::createSingleBandTiffDataset( const QStrin
   }
 
   // Write out the projection definition.
-  GDALSetProjection( hDstDS.get(), crs.toWkt( QgsCoordinateReferenceSystem::WKT_PREFERRED_GDAL ).toLatin1().constData() );
+  GDALSetProjection( hDstDS.get(), crs.toWkt( Qgis::CrsWktVariant::PreferredGdal ).toLatin1().constData() );
   GDALSetGeoTransform( hDstDS.get(), geoTransform );
   return hDstDS;
 }
@@ -300,8 +299,8 @@ bool QgsGdalUtils::resampleSingleBandRaster( GDALDatasetH hSrcDS,
 {
   char **papszOptions = nullptr;
 
-  papszOptions = CSLSetNameValue( papszOptions, "SRC_SRS", sourceCrs.toWkt( QgsCoordinateReferenceSystem::WKT_PREFERRED_GDAL ).toUtf8().constData() );
-  papszOptions = CSLSetNameValue( papszOptions, "DST_SRS", destinationCrs.toWkt( QgsCoordinateReferenceSystem::WKT_PREFERRED_GDAL ).toUtf8().constData() );
+  papszOptions = CSLSetNameValue( papszOptions, "SRC_SRS", sourceCrs.toWkt( Qgis::CrsWktVariant::PreferredGdal ).toUtf8().constData() );
+  papszOptions = CSLSetNameValue( papszOptions, "DST_SRS", destinationCrs.toWkt( Qgis::CrsWktVariant::PreferredGdal ).toUtf8().constData() );
 
   bool result = resampleSingleBandRasterStatic( hSrcDS, hDstDS, resampleAlg, papszOptions );
   CSLDestroy( papszOptions );
@@ -815,7 +814,7 @@ bool QgsGdalUtils::vrtMatchesLayerType( const QString &vrtPath, Qgis::LayerType 
     case Qgis::LayerType::Annotation:
     case Qgis::LayerType::PointCloud:
     case Qgis::LayerType::Group:
-    case Qgis::LayerType::TiledMesh:
+    case Qgis::LayerType::TiledScene:
       break;
   }
 

@@ -20,6 +20,7 @@
 #include "qgssymbol.h"
 #include "qgscolorramp.h"
 #include "qgscolorrampimpl.h"
+#include "qgscolorutils.h"
 #include "qgsexpression.h"
 #include "qgsexpressionnode.h"
 #include "qgspainteffect.h"
@@ -1226,6 +1227,9 @@ QList<QPolygonF> offsetLine( QPolygonF polyline, double dist, Qgis::GeometryType
 
 QgsSymbol *QgsSymbolLayerUtils::loadSymbol( const QDomElement &element, const QgsReadWriteContext &context )
 {
+  if ( element.isNull() )
+    return nullptr;
+
   QgsSymbolLayerList layers;
   QDomNode layerNode = element.firstChild();
 
@@ -1341,6 +1345,7 @@ QgsSymbolLayer *QgsSymbolLayerUtils::loadSymbolLayer( QDomElement &element, cons
   const bool enabled = element.attribute( QStringLiteral( "enabled" ), QStringLiteral( "1" ) ).toInt();
   const int pass = element.attribute( QStringLiteral( "pass" ) ).toInt();
   const QString id = element.attribute( QStringLiteral( "id" ) );
+  const Qgis::SymbolLayerUserFlags userFlags = qgsFlagKeysToValue( element.attribute( QStringLiteral( "userFlags" ) ), Qgis::SymbolLayerUserFlags() );
 
   // parse properties
   QVariantMap props = parseProperties( element );
@@ -1357,6 +1362,7 @@ QgsSymbolLayer *QgsSymbolLayerUtils::loadSymbolLayer( QDomElement &element, cons
     layer->setLocked( locked );
     layer->setRenderingPass( pass );
     layer->setEnabled( enabled );
+    layer->setUserFlags( userFlags );
 
     // old project format, empty is missing, keep the actual layer one
     if ( !id.isEmpty() )
@@ -1443,6 +1449,8 @@ QDomElement QgsSymbolLayerUtils::saveSymbol( const QString &name, const QgsSymbo
     layerEl.setAttribute( QStringLiteral( "locked" ), layer->isLocked() );
     layerEl.setAttribute( QStringLiteral( "pass" ), layer->renderingPass() );
     layerEl.setAttribute( QStringLiteral( "id" ), layer->id() );
+    if ( layer->userFlags() != Qgis::SymbolLayerUserFlags() )
+      layerEl.setAttribute( QStringLiteral( "userFlags" ), qgsFlagValueToKeys( layer->userFlags() ) );
 
     QVariantMap props = layer->properties();
 
@@ -1960,8 +1968,8 @@ bool QgsSymbolLayerUtils::convertPolygonSymbolizerToPointMarker( QDomElement &el
     {
       QVariantMap map;
       map[QStringLiteral( "name" )] = QStringLiteral( "square" );
-      map[QStringLiteral( "color" )] = encodeColor( validFill ? fillColor : Qt::transparent );
-      map[QStringLiteral( "color_border" )] = encodeColor( validStroke ? strokeColor : Qt::transparent );
+      map[QStringLiteral( "color" )] = QgsColorUtils::colorToString( validFill ? fillColor : Qt::transparent );
+      map[QStringLiteral( "color_border" )] = QgsColorUtils::colorToString( validStroke ? strokeColor : Qt::transparent );
       map[QStringLiteral( "size" )] = QString::number( 6 );
       map[QStringLiteral( "angle" )] = QString::number( 0 );
       map[QStringLiteral( "offset" )] = encodePoint( QPointF( 0, 0 ) );
@@ -2153,7 +2161,7 @@ bool QgsSymbolLayerUtils::convertPolygonSymbolizerToPointMarker( QDomElement &el
         QVariantMap map;
         map[QStringLiteral( "font" )] = name;
         map[QStringLiteral( "chr" )] = markIndex;
-        map[QStringLiteral( "color" )] = encodeColor( validFill ? fillColor : Qt::transparent );
+        map[QStringLiteral( "color" )] = QgsColorUtils::colorToString( validFill ? fillColor : Qt::transparent );
         if ( size > 0 )
           map[QStringLiteral( "size" )] = QString::number( size );
         if ( !qgsDoubleNear( angle, 0.0 ) )
@@ -3611,7 +3619,7 @@ QgsNamedColorList QgsSymbolLayerUtils::colorListFromMimeData( const QMimeData *d
         }
 
         QPair< QColor, QString> namedColor;
-        namedColor.first = QgsSymbolLayerUtils::decodeColor( currentElem.attribute( QStringLiteral( "color" ), QStringLiteral( "255,255,255,255" ) ) );
+        namedColor.first = QgsColorUtils::colorFromString( currentElem.attribute( QStringLiteral( "color" ), QStringLiteral( "255,255,255,255" ) ) );
         namedColor.second = currentElem.attribute( QStringLiteral( "label" ), QString() );
 
         mimeColors << namedColor;
@@ -3708,7 +3716,7 @@ QMimeData *QgsSymbolLayerUtils::colorListToMimeData( const QgsNamedColorList &co
   for ( ; colorIt != colorList.constEnd(); ++colorIt )
   {
     QDomElement namedColor = xmlDoc.createElement( QStringLiteral( "NamedColor" ) );
-    namedColor.setAttribute( QStringLiteral( "color" ), QgsSymbolLayerUtils::encodeColor( ( *colorIt ).first ) );
+    namedColor.setAttribute( QStringLiteral( "color" ), QgsColorUtils::colorToString( ( *colorIt ).first ) );
     namedColor.setAttribute( QStringLiteral( "label" ), ( *colorIt ).second );
     xmlRootElement.appendChild( namedColor );
   }
@@ -4527,7 +4535,7 @@ QPolygonF QgsSymbolLayerUtils::polylineSubstring( const QPolygonF &polyline, dou
       // start point falls on this segment
       const double distanceToStart = startDistance - distanceTraversed;
       double startX, startY;
-      QgsGeometryUtils::pointOnLineWithDistance( p1.x(), p1.y(), p2.x(), p2.y(), distanceToStart, startX, startY );
+      QgsGeometryUtilsBase::pointOnLineWithDistance( p1.x(), p1.y(), p2.x(), p2.y(), distanceToStart, startX, startY );
       substringPoints << QPointF( startX, startY );
       foundStart = true;
     }
@@ -4536,7 +4544,7 @@ QPolygonF QgsSymbolLayerUtils::polylineSubstring( const QPolygonF &polyline, dou
       // end point falls on this segment
       const double distanceToEnd = endDistance - distanceTraversed;
       double endX, endY;
-      QgsGeometryUtils::pointOnLineWithDistance( p1.x(), p1.y(), p2.x(), p2.y(), distanceToEnd, endX, endY );
+      QgsGeometryUtilsBase::pointOnLineWithDistance( p1.x(), p1.y(), p2.x(), p2.y(), distanceToEnd, endX, endY );
       if ( substringPoints.last() != QPointF( endX, endY ) )
         substringPoints << QPointF( endX, endY );
     }
@@ -4563,7 +4571,7 @@ QPolygonF QgsSymbolLayerUtils::polylineSubstring( const QPolygonF &polyline, dou
 bool QgsSymbolLayerUtils::isSharpCorner( QPointF p1, QPointF p2, QPointF p3 )
 {
   double vertexAngle = M_PI - ( std::atan2( p3.y() - p2.y(), p3.x() - p2.x() ) - std::atan2( p2.y() - p1.y(), p2.x() - p1.x() ) );
-  vertexAngle = QgsGeometryUtils::normalizedAngle( vertexAngle );
+  vertexAngle = QgsGeometryUtilsBase::normalizedAngle( vertexAngle );
 
   // extreme angles form more than 45 degree angle at a node
   return vertexAngle < M_PI * 135.0 / 180.0 || vertexAngle > M_PI * 225.0 / 180.0;

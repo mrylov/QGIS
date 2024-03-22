@@ -217,7 +217,7 @@ class TestQgsLegendRenderer : public QgsTest
 
     bool _verifyImage( const QImage &image, const QString &testName, int diff = 30 )
     {
-      return imageCheck( testName, testName, image, QString(), diff, QSize( 6, 10 ) );
+      return QGSIMAGECHECK( testName, testName, image, QString(), diff, QSize( 6, 10 ) );
     }
 };
 
@@ -1564,8 +1564,8 @@ void TestQgsLegendRenderer::testTextOnSymbol()
   QgsDefaultVectorLayerLegend *legend = new QgsDefaultVectorLayerLegend( vl );
   legend->setTextOnSymbolEnabled( true );
   QHash<QString, QString> content;
-  content["0"] = "Rd";
-  content["2"] = "Bl";
+  content[cats[0].uuid()] = "Rd";
+  content[cats[2].uuid()] = "Bl";
   legend->setTextOnSymbolContent( content );
   QgsTextFormat textFormat;
   textFormat.setFont( QgsFontUtils::getStandardTestFont( QStringLiteral( "Roman" ) ) );

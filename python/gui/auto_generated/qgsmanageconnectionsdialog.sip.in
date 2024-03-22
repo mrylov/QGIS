@@ -35,7 +35,8 @@ class QgsManageConnectionsDialog : QDialog
       ArcgisMapServer,
       ArcgisFeatureServer,
       VectorTile,
-      TiledMesh,
+      TiledScene,
+      SensorThings,
     };
 
     QgsManageConnectionsDialog( QWidget *parent /TransferThis/ = 0, Mode mode = Export, Type type = WMS, const QString &fileName = QString() );

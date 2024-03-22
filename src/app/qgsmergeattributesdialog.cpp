@@ -33,22 +33,22 @@
 #include <limits>
 #include <QComboBox>
 
-const QList< QgsStatisticalSummary::Statistic > QgsMergeAttributesDialog::DISPLAY_STATS =
-  QList< QgsStatisticalSummary::Statistic > () << QgsStatisticalSummary::Count
-  << QgsStatisticalSummary::Sum
-  << QgsStatisticalSummary::Mean
-  << QgsStatisticalSummary::Median
-  << QgsStatisticalSummary::StDev
-  << QgsStatisticalSummary::StDevSample
-  << QgsStatisticalSummary::Min
-  << QgsStatisticalSummary::Max
-  << QgsStatisticalSummary::Range
-  << QgsStatisticalSummary::Minority
-  << QgsStatisticalSummary::Majority
-  << QgsStatisticalSummary::Variety
-  << QgsStatisticalSummary::FirstQuartile
-  << QgsStatisticalSummary::ThirdQuartile
-  << QgsStatisticalSummary::InterQuartileRange;
+const QList< Qgis::Statistic > QgsMergeAttributesDialog::DISPLAY_STATS =
+  QList< Qgis::Statistic > () << Qgis::Statistic::Count
+  << Qgis::Statistic::Sum
+  << Qgis::Statistic::Mean
+  << Qgis::Statistic::Median
+  << Qgis::Statistic::StDev
+  << Qgis::Statistic::StDevSample
+  << Qgis::Statistic::Min
+  << Qgis::Statistic::Max
+  << Qgis::Statistic::Range
+  << Qgis::Statistic::Minority
+  << Qgis::Statistic::Majority
+  << Qgis::Statistic::Variety
+  << Qgis::Statistic::FirstQuartile
+  << Qgis::Statistic::ThirdQuartile
+  << Qgis::Statistic::InterQuartileRange;
 
 QgsMergeAttributesDialog::QgsMergeAttributesDialog( const QgsFeatureList &features, QgsVectorLayer *vl, QgsMapCanvas *canvas, QWidget *parent, Qt::WindowFlags f )
   : QDialog( parent, f )
@@ -177,6 +177,10 @@ void QgsMergeAttributesDialog::createTableWidgetContents()
     mTableWidget->setColumnCount( col + 1 );
     mFieldToColumnMap[ mFields.at( idx ).name() ] = col;
 
+    QTableWidgetItem *item = new QTableWidgetItem( mFields.at( idx ).name() );
+    item->setData( FieldIndex, idx );
+    mTableWidget->setHorizontalHeaderItem( col, item );
+
     QComboBox *cb = createMergeComboBox( mFields.at( idx ).type(), col );
     if ( ! mVectorLayer->dataProvider()->pkAttributeIndexes().contains( mFields.fieldOriginIndex( idx ) ) &&
          mFields.at( idx ).constraints().constraints() & QgsFieldConstraints::ConstraintUnique )
@@ -185,9 +189,7 @@ void QgsMergeAttributesDialog::createTableWidgetContents()
     }
     mTableWidget->setCellWidget( 0, col, cb );
 
-    QTableWidgetItem *item = new QTableWidgetItem( mFields.at( idx ).name() );
-    item->setData( FieldIndex, idx );
-    mTableWidget->setHorizontalHeaderItem( col++, item );
+    col++;
   }
 
   //insert the attribute values
@@ -284,9 +286,9 @@ QComboBox *QgsMergeAttributesDialog::createMergeComboBox( QVariant::Type columnT
     case QVariant::Int:
     case QVariant::LongLong:
     {
-      for ( QgsStatisticalSummary::Statistic stat : std::as_const( DISPLAY_STATS ) )
+      for ( Qgis::Statistic stat : std::as_const( DISPLAY_STATS ) )
       {
-        newComboBox->addItem( QgsStatisticalSummary::displayName( stat ), stat );
+        newComboBox->addItem( QgsStatisticalSummary::displayName( stat ), static_cast< int >( stat ) );
       }
       break;
     }
@@ -400,7 +402,7 @@ void QgsMergeAttributesDialog::refreshMergedValue( int col )
     else
     {
       //numerical statistic
-      QgsStatisticalSummary::Statistic stat = static_cast< QgsStatisticalSummary::Statistic >( comboBox->currentData().toInt() );
+      Qgis::Statistic stat = static_cast< Qgis::Statistic >( comboBox->currentData().toInt() );
       mergeResult = calcStatistic( fieldIdx, stat );
     }
 
@@ -464,7 +466,7 @@ void QgsMergeAttributesDialog::setAllAttributesFromFeature( QgsFeatureId feature
   mTargetFeatureId = featureId;
 }
 
-QVariant QgsMergeAttributesDialog::calcStatistic( int col, QgsStatisticalSummary::Statistic stat )
+QVariant QgsMergeAttributesDialog::calcStatistic( int col, Qgis::Statistic stat )
 {
   QgsStatisticalSummary summary( stat );
 

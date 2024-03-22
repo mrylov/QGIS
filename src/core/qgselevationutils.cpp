@@ -68,6 +68,7 @@ bool QgsElevationUtils::enableElevationForLayer( QgsMapLayer *layer )
       if ( QgsRasterLayerElevationProperties *properties = qobject_cast<QgsRasterLayerElevationProperties * >( layer->elevationProperties() ) )
       {
         properties->setEnabled( true );
+        properties->setMode( Qgis::RasterElevationMode::RepresentsElevationSurface );
         // This could potentially be made smarter, eg by checking the data type of bands. But that's likely overkill..!
         properties->setBandNumber( 1 );
         return true;
@@ -83,7 +84,7 @@ bool QgsElevationUtils::enableElevationForLayer( QgsMapLayer *layer )
     case Qgis::LayerType::Annotation:
     case Qgis::LayerType::PointCloud:
     case Qgis::LayerType::Group:
-    case Qgis::LayerType::TiledMesh:
+    case Qgis::LayerType::TiledScene:
       break;
   }
   return false;

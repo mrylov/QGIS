@@ -11,8 +11,7 @@ __author__ = '(C) 2020 by Nyall Dawson'
 __date__ = '10/08/2020'
 __copyright__ = 'Copyright 2020, The QGIS Project'
 
-import qgis  # NOQA
-from qgis.PyQt.QtCore import QDir, QSize, Qt
+from qgis.PyQt.QtCore import QSize, Qt
 from qgis.PyQt.QtGui import QColor, QImage, QPainter
 from qgis.PyQt.QtXml import QDomDocument
 from qgis.core import (
@@ -35,7 +34,9 @@ from qgis.core import (
     QgsTextFormat,
     QgsVertexId,
 )
-from qgis.testing import start_app, unittest
+
+import unittest
+from qgis.testing import start_app, QgisTestCase
 
 from utilities import getTestFont, unitTestDataPath
 
@@ -43,7 +44,7 @@ start_app()
 TEST_DATA_DIR = unitTestDataPath()
 
 
-class TestQgsAnnotationPointTextItem(unittest.TestCase):
+class TestQgsAnnotationPointTextItem(QgisTestCase):
 
     @classmethod
     def control_path_prefix(cls):
@@ -59,7 +60,7 @@ class TestQgsAnnotationPointTextItem(unittest.TestCase):
         item.setText('tttttt')
         item.setPoint(QgsPointXY(1000, 2000))
         item.setAngle(55)
-        item.setAlignment(Qt.AlignRight)
+        item.setAlignment(Qt.AlignmentFlag.AlignRight)
         item.setRotationMode(Qgis.SymbolRotationMode.RespectMapRotation)
         item.setZIndex(11)
 
@@ -71,7 +72,7 @@ class TestQgsAnnotationPointTextItem(unittest.TestCase):
         self.assertEqual(item.point().x(), 1000.0)
         self.assertEqual(item.point().y(), 2000.0)
         self.assertEqual(item.angle(), 55.0)
-        self.assertEqual(item.alignment(), Qt.AlignRight)
+        self.assertEqual(item.alignment(), Qt.AlignmentFlag.AlignRight)
         self.assertEqual(item.zIndex(), 11)
         self.assertEqual(item.format().size(), 37)
         self.assertEqual(item.rotationMode(), Qgis.SymbolRotationMode.RespectMapRotation)
@@ -127,7 +128,7 @@ class TestQgsAnnotationPointTextItem(unittest.TestCase):
 
         item = QgsAnnotationPointTextItem('my text', QgsPointXY(12, 13))
         item.setAngle(55)
-        item.setAlignment(Qt.AlignRight)
+        item.setAlignment(Qt.AlignmentFlag.AlignRight)
         item.setZIndex(11)
         format = QgsTextFormat()
         format.setSize(37)
@@ -144,7 +145,7 @@ class TestQgsAnnotationPointTextItem(unittest.TestCase):
         self.assertEqual(s2.point().x(), 12.0)
         self.assertEqual(s2.point().y(), 13.0)
         self.assertEqual(s2.angle(), 55.0)
-        self.assertEqual(s2.alignment(), Qt.AlignRight)
+        self.assertEqual(s2.alignment(), Qt.AlignmentFlag.AlignRight)
         self.assertEqual(s2.zIndex(), 11)
         self.assertEqual(s2.format().size(), 37)
         self.assertTrue(s2.useSymbologyReferenceScale())
@@ -154,7 +155,7 @@ class TestQgsAnnotationPointTextItem(unittest.TestCase):
     def testClone(self):
         item = QgsAnnotationPointTextItem('my text', QgsPointXY(12, 13))
         item.setAngle(55)
-        item.setAlignment(Qt.AlignRight)
+        item.setAlignment(Qt.AlignmentFlag.AlignRight)
         item.setZIndex(11)
         format = QgsTextFormat()
         format.setSize(37)
@@ -168,7 +169,7 @@ class TestQgsAnnotationPointTextItem(unittest.TestCase):
         self.assertEqual(item2.point().x(), 12.0)
         self.assertEqual(item2.point().y(), 13.0)
         self.assertEqual(item2.angle(), 55.0)
-        self.assertEqual(item2.alignment(), Qt.AlignRight)
+        self.assertEqual(item2.alignment(), Qt.AlignmentFlag.AlignRight)
         self.assertEqual(item2.zIndex(), 11)
         self.assertEqual(item2.format().size(), 37)
         self.assertTrue(item2.useSymbologyReferenceScale())
@@ -185,18 +186,18 @@ class TestQgsAnnotationPointTextItem(unittest.TestCase):
         item.setFormat(format)
 
         item.setAngle(-30)
-        item.setAlignment(Qt.AlignRight)
+        item.setAlignment(Qt.AlignmentFlag.AlignRight)
 
         settings = QgsMapSettings()
         settings.setDestinationCrs(QgsCoordinateReferenceSystem('EPSG:4326'))
         settings.setExtent(QgsRectangle(10, 10, 16, 16))
         settings.setOutputSize(QSize(300, 300))
 
-        settings.setFlag(QgsMapSettings.Antialiasing, False)
+        settings.setFlag(QgsMapSettings.Flag.Antialiasing, False)
 
         rc = QgsRenderContext.fromMapSettings(settings)
         rc.setScaleFactor(96 / 25.4)  # 96 DPI
-        image = QImage(200, 200, QImage.Format_ARGB32)
+        image = QImage(200, 200, QImage.Format.Format_ARGB32)
         image.setDotsPerMeterX(int(96 / 25.4 * 1000))
         image.setDotsPerMeterY(int(96 / 25.4 * 1000))
         image.fill(QColor(255, 255, 255))
@@ -220,7 +221,7 @@ class TestQgsAnnotationPointTextItem(unittest.TestCase):
         item.setFormat(format)
 
         item.setAngle(-30)
-        item.setAlignment(Qt.AlignRight)
+        item.setAlignment(Qt.AlignmentFlag.AlignRight)
 
         settings = QgsMapSettings()
         settings.setDestinationCrs(QgsCoordinateReferenceSystem('EPSG:4326'))
@@ -228,11 +229,11 @@ class TestQgsAnnotationPointTextItem(unittest.TestCase):
         settings.setOutputSize(QSize(300, 300))
         settings.setRotation(90)
 
-        settings.setFlag(QgsMapSettings.Antialiasing, False)
+        settings.setFlag(QgsMapSettings.Flag.Antialiasing, False)
 
         rc = QgsRenderContext.fromMapSettings(settings)
         rc.setScaleFactor(96 / 25.4)  # 96 DPI
-        image = QImage(200, 200, QImage.Format_ARGB32)
+        image = QImage(200, 200, QImage.Format.Format_ARGB32)
         image.setDotsPerMeterX(int(96 / 25.4 * 1000))
         image.setDotsPerMeterY(int(96 / 25.4 * 1000))
         image.fill(QColor(255, 255, 255))
@@ -258,7 +259,7 @@ class TestQgsAnnotationPointTextItem(unittest.TestCase):
         item.setFormat(format)
 
         item.setAngle(-30)
-        item.setAlignment(Qt.AlignRight)
+        item.setAlignment(Qt.AlignmentFlag.AlignRight)
 
         settings = QgsMapSettings()
         settings.setDestinationCrs(QgsCoordinateReferenceSystem('EPSG:4326'))
@@ -266,11 +267,11 @@ class TestQgsAnnotationPointTextItem(unittest.TestCase):
         settings.setOutputSize(QSize(300, 300))
         settings.setRotation(90)
 
-        settings.setFlag(QgsMapSettings.Antialiasing, False)
+        settings.setFlag(QgsMapSettings.Flag.Antialiasing, False)
 
         rc = QgsRenderContext.fromMapSettings(settings)
         rc.setScaleFactor(96 / 25.4)  # 96 DPI
-        image = QImage(200, 200, QImage.Format_ARGB32)
+        image = QImage(200, 200, QImage.Format.Format_ARGB32)
         image.setDotsPerMeterX(int(96 / 25.4 * 1000))
         image.setDotsPerMeterY(int(96 / 25.4 * 1000))
         image.fill(QColor(255, 255, 255))
@@ -294,18 +295,18 @@ class TestQgsAnnotationPointTextItem(unittest.TestCase):
         item.setFormat(format)
 
         item.setAngle(-30)
-        item.setAlignment(Qt.AlignRight)
+        item.setAlignment(Qt.AlignmentFlag.AlignRight)
 
         settings = QgsMapSettings()
         settings.setDestinationCrs(QgsCoordinateReferenceSystem('EPSG:4326'))
         settings.setExtent(QgsRectangle(10, 10, 16, 16))
         settings.setOutputSize(QSize(300, 300))
 
-        settings.setFlag(QgsMapSettings.Antialiasing, False)
+        settings.setFlag(QgsMapSettings.Flag.Antialiasing, False)
 
         rc = QgsRenderContext.fromMapSettings(settings)
         rc.setScaleFactor(96 / 25.4)  # 96 DPI
-        image = QImage(200, 200, QImage.Format_ARGB32)
+        image = QImage(200, 200, QImage.Format.Format_ARGB32)
         image.setDotsPerMeterX(int(96 / 25.4 * 1000))
         image.setDotsPerMeterY(int(96 / 25.4 * 1000))
         image.fill(QColor(255, 255, 255))
@@ -329,19 +330,19 @@ class TestQgsAnnotationPointTextItem(unittest.TestCase):
         item.setFormat(format)
 
         item.setAngle(-30)
-        item.setAlignment(Qt.AlignRight)
+        item.setAlignment(Qt.AlignmentFlag.AlignRight)
 
         settings = QgsMapSettings()
         settings.setDestinationCrs(QgsCoordinateReferenceSystem('EPSG:3857'))
         settings.setExtent(QgsRectangle(1250958, 1386945, 1420709, 1532518))
         settings.setOutputSize(QSize(300, 300))
 
-        settings.setFlag(QgsMapSettings.Antialiasing, False)
+        settings.setFlag(QgsMapSettings.Flag.Antialiasing, False)
 
         rc = QgsRenderContext.fromMapSettings(settings)
         rc.setScaleFactor(96 / 25.4)  # 96 DPI
         rc.setCoordinateTransform(QgsCoordinateTransform(QgsCoordinateReferenceSystem('EPSG:4326'), settings.destinationCrs(), QgsProject.instance()))
-        image = QImage(200, 200, QImage.Format_ARGB32)
+        image = QImage(200, 200, QImage.Format.Format_ARGB32)
         image.setDotsPerMeterX(int(96 / 25.4 * 1000))
         image.setDotsPerMeterY(int(96 / 25.4 * 1000))
         image.fill(QColor(255, 255, 255))
