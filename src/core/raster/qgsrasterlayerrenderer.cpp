@@ -34,6 +34,9 @@
 #include "qgsruntimeprofiler.h"
 #include "qgsapplication.h"
 #include "qgsrastertransparency.h"
+#include "qgsrasterlayerutils.h"
+#include "qgsinterval.h"
+#include "qgsunittypes.h"
 
 #include <QElapsedTimer>
 #include <QPointer>
@@ -272,26 +275,57 @@ QgsRasterLayerRenderer::QgsRasterLayerRenderer( QgsRasterLayer *layer, QgsRender
   mPipe->evaluateDataDefinedProperties( rendererContext.expressionContext() );
 
   const QgsRasterLayerTemporalProperties *temporalProperties = qobject_cast< const QgsRasterLayerTemporalProperties * >( layer->temporalProperties() );
+  const QgsRasterLayerElevationProperties *elevationProperties = qobject_cast<QgsRasterLayerElevationProperties *>( layer->elevationProperties() );
+
+  if ( ( temporalProperties->isActive() && renderContext()->isTemporal() )
+       || ( elevationProperties->hasElevation() && !renderContext()->zRange().isInfinite() ) )
+  {
+    // temporal and/or elevation band filtering may be applicable
+    bool matched = false;
+    const int matchedBand = QgsRasterLayerUtils::renderedBandForElevationAndTemporalRange(
+                              layer,
+                              rendererContext.temporalRange(),
+                              rendererContext.zRange(),
+                              matched
+                            );
+    if ( matched && matchedBand > 0 )
+    {
+      mPipe->renderer()->setInputBand( matchedBand );
+    }
+  }
+
   if ( temporalProperties->isActive() && renderContext()->isTemporal() )
   {
     switch ( temporalProperties->mode() )
     {
       case Qgis::RasterTemporalMode::FixedTemporalRange:
       case Qgis::RasterTemporalMode::RedrawLayerOnly:
-        break;
-
       case Qgis::RasterTemporalMode::FixedRangePerBand:
-      {
-        const int matchingBand = temporalProperties->bandForTemporalRange( layer, rendererContext.temporalRange() );
-
-        // this is guaranteed, as we won't ever be creating a renderer if this condition is not met, but let's be ultra safe!
-        if ( matchingBand > 0 )
-        {
-          mPipe->renderer()->setInputBand( matchingBand );
-        }
-
         break;
-      }
+
+      case Qgis::RasterTemporalMode::RepresentsTemporalValues:
+        if ( mPipe->renderer()->usesBands().contains( temporalProperties->bandNumber() ) )
+        {
+          // if layer has elevation settings and we are only rendering a temporal range => we need to filter pixels by temporal values
+          std::unique_ptr< QgsRasterTransparency > transparency;
+          if ( const QgsRasterTransparency *rendererTransparency = mPipe->renderer()->rasterTransparency() )
+            transparency = std::make_unique< QgsRasterTransparency >( *rendererTransparency );
+          else
+            transparency = std::make_unique< QgsRasterTransparency >();
+
+          QVector<QgsRasterTransparency::TransparentSingleValuePixel> transparentPixels = transparency->transparentSingleValuePixelList();
+
+          const QDateTime &offset = temporalProperties->temporalRepresentationOffset();
+          const QgsInterval &scale = temporalProperties->temporalRepresentationScale();
+          const double adjustedLower = static_cast< double >( offset.msecsTo( rendererContext.temporalRange().begin() ) ) * QgsUnitTypes::fromUnitToUnitFactor( Qgis::TemporalUnit::Milliseconds, scale.originalUnit() ) / scale.originalDuration();
+          const double adjustedUpper = static_cast< double >( offset.msecsTo( rendererContext.temporalRange().end() ) ) * QgsUnitTypes::fromUnitToUnitFactor( Qgis::TemporalUnit::Milliseconds, scale.originalUnit() ) / scale.originalDuration();
+          transparentPixels.append( QgsRasterTransparency::TransparentSingleValuePixel( std::numeric_limits<double>::lowest(), adjustedLower, 0, true, !rendererContext.zRange().includeLower() ) );
+          transparentPixels.append( QgsRasterTransparency::TransparentSingleValuePixel( adjustedUpper, std::numeric_limits<double>::max(), 0, !rendererContext.zRange().includeUpper(), true ) );
+
+          transparency->setTransparentSingleValuePixelList( transparentPixels );
+          mPipe->renderer()->setRasterTransparency( transparency.release() );
+        }
+        break;
 
       case Qgis::RasterTemporalMode::TemporalRangeFromDataProvider:
         // in this mode we need to pass on the desired render temporal range to the data provider
@@ -311,17 +345,16 @@ QgsRasterLayerRenderer::QgsRasterLayerRenderer( QgsRasterLayer *layer, QgsRender
 
   mClippingRegions = QgsMapClippingUtils::collectClippingRegionsForLayer( *renderContext(), layer );
 
-  if ( layer->elevationProperties() && layer->elevationProperties()->hasElevation() )
+  if ( elevationProperties && elevationProperties->hasElevation() )
   {
-    QgsRasterLayerElevationProperties *elevProp = qobject_cast<QgsRasterLayerElevationProperties *>( layer->elevationProperties() );
     mDrawElevationMap = true;
-    mElevationScale = elevProp->zScale();
-    mElevationOffset = elevProp->zOffset();
-    mElevationBand = elevProp->bandNumber();
+    mElevationScale = elevationProperties->zScale();
+    mElevationOffset = elevationProperties->zOffset();
+    mElevationBand = elevationProperties->bandNumber();
 
     if ( !rendererContext.zRange().isInfinite() )
     {
-      switch ( elevProp->mode() )
+      switch ( elevationProperties->mode() )
       {
         case Qgis::RasterElevationMode::FixedElevationRange:
           // don't need to handle anything here -- the layer renderer will never be created if the
@@ -330,16 +363,8 @@ QgsRasterLayerRenderer::QgsRasterLayerRenderer( QgsRasterLayer *layer, QgsRender
 
         case Qgis::RasterElevationMode::FixedRangePerBand:
         case Qgis::RasterElevationMode::DynamicRangePerBand:
-        {
-          const int matchingBand = elevProp->bandForElevationRange( layer, rendererContext.zRange() );
-
-          // this is guaranteed, as we won't ever be creating a renderer if this condition is not met, but let's be ultra safe!
-          if ( matchingBand > 0 )
-          {
-            mPipe->renderer()->setInputBand( matchingBand );
-          }
+          // temporal/elevation band based filtering was already handled earlier in this method
           break;
-        }
 
         case Qgis::RasterElevationMode::RepresentsElevationSurface:
         {

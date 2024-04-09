@@ -1113,8 +1113,15 @@ class TestQgsGeometry(QgisTestCase):
               QgsPointXY(2, 2),
               QgsPointXY(0, 2),
               QgsPointXY(0, 0)]])
-        myPoint = QgsGeometry.fromPointXY(QgsPointXY(1, 1))
-        self.assertTrue(QgsGeometry.contains(myPoly, myPoint))
+        pointInside = QgsPointXY(1, 1)
+        self.assertTrue(myPoly.contains(pointInside))
+        self.assertTrue(myPoly.contains(QgsGeometry.fromPointXY(pointInside)))
+        self.assertTrue(myPoly.contains(pointInside.x(), pointInside.y()))
+
+        pointOutside = QgsPointXY(3, 3)
+        self.assertFalse(myPoly.contains(pointOutside))
+        self.assertFalse(myPoly.contains(QgsGeometry.fromPointXY(pointOutside)))
+        self.assertFalse(myPoly.contains(pointOutside.x(), pointOutside.y()))
 
     def testTouches(self):
         myLine = QgsGeometry.fromPolylineXY([

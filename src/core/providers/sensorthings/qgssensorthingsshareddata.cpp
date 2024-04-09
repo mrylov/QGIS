@@ -45,25 +45,36 @@ QgsSensorThingsSharedData::QgsSensorThingsSharedData( const QString &uri )
 
   if ( QgsSensorThingsUtils::entityTypeHasGeometry( mEntityType ) )
   {
-    const QString geometryType = uriParts.value( QStringLiteral( "geometryType" ) ).toString();
-    if ( geometryType.compare( QLatin1String( "point" ), Qt::CaseInsensitive ) == 0 )
+    if ( uriParts.contains( QStringLiteral( "geometryType" ) ) )
     {
-      mGeometryType = Qgis::WkbType::PointZ;
+      const QString geometryType = uriParts.value( QStringLiteral( "geometryType" ) ).toString();
+      if ( geometryType.compare( QLatin1String( "point" ), Qt::CaseInsensitive ) == 0 )
+      {
+        mGeometryType = Qgis::WkbType::PointZ;
+      }
+      else if ( geometryType.compare( QLatin1String( "multipoint" ), Qt::CaseInsensitive ) == 0 )
+      {
+        mGeometryType = Qgis::WkbType::MultiPointZ;
+      }
+      else if ( geometryType.compare( QLatin1String( "line" ), Qt::CaseInsensitive ) == 0 )
+      {
+        mGeometryType = Qgis::WkbType::MultiLineStringZ;
+      }
+      else if ( geometryType.compare( QLatin1String( "polygon" ), Qt::CaseInsensitive ) == 0 )
+      {
+        mGeometryType = Qgis::WkbType::MultiPolygonZ;
+      }
+
+      if ( mGeometryType != Qgis::WkbType::NoGeometry )
+      {
+        // geometry is always GeoJSON spec (for now, at least), so CRS will always be WGS84
+        mSourceCRS = QgsCoordinateReferenceSystem( QStringLiteral( "EPSG:4326" ) );
+      }
     }
-    else if ( geometryType.compare( QLatin1String( "multipoint" ), Qt::CaseInsensitive ) == 0 )
+    else
     {
-      mGeometryType = Qgis::WkbType::MultiPointZ;
+      mGeometryType = Qgis::WkbType::NoGeometry;
     }
-    else if ( geometryType.compare( QLatin1String( "line" ), Qt::CaseInsensitive ) == 0 )
-    {
-      mGeometryType = Qgis::WkbType::MultiLineStringZ;
-    }
-    else if ( geometryType.compare( QLatin1String( "polygon" ), Qt::CaseInsensitive ) == 0 )
-    {
-      mGeometryType = Qgis::WkbType::MultiPolygonZ;
-    }
-    // geometry is always GeoJSON spec (for now, at least), so CRS will always be WGS84
-    mSourceCRS = QgsCoordinateReferenceSystem( QStringLiteral( "EPSG:4326" ) );
   }
   else
   {
@@ -484,6 +495,14 @@ bool QgsSensorThingsSharedData::processFeatureRequest( QString &nextPage, QgsFee
                 return QgsJsonUtils::jsonToVariant( json[tag] );
               };
 
+              auto getVariantList = []( const basic_json<> &json, const char *tag ) -> QVariant
+              {
+                if ( !json.contains( tag ) )
+                  return QVariant();
+
+                return QgsJsonUtils::jsonToVariant( json[tag] );
+              };
+
               auto getStringList = []( const basic_json<> &json, const char *tag ) -> QVariant
               {
                 if ( !json.contains( tag ) )
@@ -508,7 +527,7 @@ bool QgsSensorThingsSharedData::processFeatureRequest( QString &nextPage, QgsFee
                 return QVariant();
               };
 
-              auto getDateTimeRange = []( const basic_json<> &json, const char *tag ) -> std::pair< QVariant, QVariant >
+              auto getDateTimeRange = []( const basic_json<> &json, const char *tag, bool allowInstant = false ) -> std::pair< QVariant, QVariant >
               {
                 if ( !json.contains( tag ) )
                   return { QVariant(), QVariant() };
@@ -525,6 +544,11 @@ bool QgsSensorThingsSharedData::processFeatureRequest( QString &nextPage, QgsFee
                       QDateTime::fromString( rangeParts.at( 0 ), Qt::ISODateWithMs ),
                       QDateTime::fromString( rangeParts.at( 1 ), Qt::ISODateWithMs )
                     };
+                  }
+                  else if ( allowInstant )
+                  {
+                    const QDateTime instant = QDateTime::fromString( rangeString, Qt::ISODateWithMs );
+                    return { instant, instant };
                   }
                 }
 
@@ -631,7 +655,7 @@ bool QgsSensorThingsSharedData::processFeatureRequest( QString &nextPage, QgsFee
 
                 case Qgis::SensorThingsEntity::Observation:
                 {
-                  std::pair< QVariant, QVariant > phenomenonTime = getDateTimeRange( featureData, "phenomenonTime" );
+                  std::pair< QVariant, QVariant > phenomenonTime = getDateTimeRange( featureData, "phenomenonTime", true );
                   std::pair< QVariant, QVariant > validTime = getDateTimeRange( featureData, "validTime" );
                   feature.setAttributes(
                     QgsAttributes()
@@ -659,6 +683,28 @@ bool QgsSensorThingsSharedData::processFeatureRequest( QString &nextPage, QgsFee
                     << properties
                   );
                   break;
+
+                case Qgis::SensorThingsEntity::MultiDatastream:
+                {
+                  std::pair< QVariant, QVariant > phenomenonTime = getDateTimeRange( featureData, "phenomenonTime" );
+                  std::pair< QVariant, QVariant > resultTime = getDateTimeRange( featureData, "resultTime" );
+                  feature.setAttributes(
+                    QgsAttributes()
+                    << iotId
+                    << selfLink
+                    << getString( featureData, "name" )
+                    << getString( featureData, "description" )
+                    << getVariantList( featureData, "unitOfMeasurements" )
+                    << getString( featureData, "observationType" )
+                    << getStringList( featureData, "multiObservationDataTypes" )
+                    << properties
+                    << phenomenonTime.first
+                    << phenomenonTime.second
+                    << resultTime.first
+                    << resultTime.second
+                  );
+                  break;
+                }
               }
               // NOLINTEND(bugprone-branch-clone)
 
